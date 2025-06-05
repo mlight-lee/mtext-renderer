@@ -6,16 +6,17 @@ import {
   MTextAttachmentPoint,
   MTextData,
   MTextFlowDirection,
+  Point2d,
   TextStyle
 } from './types'
 
 import { StyleManager } from './styleManager'
 import {
   MTextLines,
-  TextHorizontalAlignment,
   TextLineFormatOptions
 } from './line'
 import { MTextContext, MTextLineAlignment, MTextParagraphAlignment, MTextParser, MTextToken } from '@mlightcad/mtext-parser'
+import { Point } from '@mlightcad/shx-parser'
 
 const tempPoint = /*@__PURE__*/ new THREE.Vector3()
 const tempVector = /*@__PURE__*/ new THREE.Vector3()
@@ -190,8 +191,8 @@ export class MText extends BaseText {
       }
     }
 
-    // let entityColorIndex // original entity color
-    // let colorIndex = 256 // default color is bylayer
+    const defaultFontSize = mtextData.height || 0
+    const defaultLineSpaceFactor = mtextData.lineSpaceFactor || 0.3
     const flowDirection =
       mtextData.drawingDirection ?? MTextFlowDirection.LEFT_TO_RIGHT
     const textLineFormatOptions: TextLineFormatOptions = {
@@ -200,13 +201,15 @@ export class MText extends BaseText {
       lineSpaceFactor: defaultLineSpaceFactor,
       horizontalAlignment: horizontalAlignment,
       maxWidth: maxWidth,
-      flowDirection: flowDirection
+      flowDirection: flowDirection,
+      byBlockColor: 0xffffff,
+      byLayerColor: 0xffffff
     }
 
     const context = new MTextContext();
     context.fontFace.family = style.font;
-    context.capHeight = mtextData.height || 1.0;
-    context.widthFactor = mtextData.widthFactor ?? 1.0;
+    context.capHeight = { value: mtextData.height || 1.0, isRelative: true };
+    context.widthFactor = { value: mtextData.widthFactor ?? 1.0, isRelative: true };
     context.align = verticalAlignment;
     context.paragraph.align = horizontalAlignment;
     const parser = new MTextParser(mtextData.text, context, true);
@@ -230,31 +233,10 @@ export class MText extends BaseText {
     tokens: Generator<MTextToken>,
     textLine: MTextLines
   ) {
-    const mtext = new THREE.Group()
-    for (const token of tokens) {
-      if (Array.isArray(item)) {
-        const textData = this.getMTextGroup(item, textLine)
-        if (textData) {
-          mtext.add(textData)
-        }
-      } else if (typeof item === 'string') {
-        mtext.add(textLine.processText(item))
-      } else if (typeof item === 'object') {
-        textLine.processFormat(item as MTextInlineCodes)
-      }
-    }
-
+    const mtext = textLine.processText(tokens)
     if (mtext.children.length === 0) {
       return undefined
     }
-
-    // DxfUtils.merge(mtext, false)
-
-    // recover entity color index
-    // if (entityColorIndex) {
-    //   mtextData.colorIndex = entityColorIndex
-    // }
-
     // reduce hierarchy
     if (mtext.children.length === 1) {
       return mtext.children[0]
@@ -276,7 +258,7 @@ export class MText extends BaseText {
     height: number,
     attachmentPoint?: MTextAttachmentPoint,
     flowDirection?: MTextFlowDirection
-  ): AcGePoint2dLike {
+  ): Point2d {
     let anchorX = 0,
       anchorY = 0
     switch (attachmentPoint) {

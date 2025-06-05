@@ -3,14 +3,14 @@ import { ChangedProperties, MTextParagraphAlignment, MTextToken, TokenType } fro
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import { BaseTextShape, FontManager } from '../font'
+import { FontManager } from '../font'
 import { BaseText } from './baseText'
 import { StyleManager } from './styleManager'
 import { MTextFlowDirection, TextStyle } from './types'
+import { getColorByIndex } from '../common'
 
 
 const tempVector = /*@__PURE__*/ new THREE.Vector3()
-const tempColor = /*@__PURE__*/ new AcCmColor()
 
 // The property palette of mtext can display line spacing. This magic number is inferred from value
 // displayed in property palette of mtext.
@@ -32,7 +32,7 @@ export interface TextLineFormatOptions {
   /**
    * The horizontal alignment.
    */
-  horizontalAlignment: TextHorizontalAlignment
+  horizontalAlignment: MTextParagraphAlignment
   /**
    * The maximum width of one line of text string.
    */
@@ -41,6 +41,14 @@ export interface TextLineFormatOptions {
    * The direction that the text string follows from its start to its finish.
    */
   flowDirection: MTextFlowDirection
+  /**
+   * The color of the current block which is used when the text color is by block.
+   */
+  byBlockColor: number
+  /**
+   * The color of the current layer which is used when the text color is by layer.
+   */
+  byLayerColor: number
 }
 
 /**
@@ -89,7 +97,7 @@ export class MTextLines extends BaseText {
     this._currentFont = this.textStyle.font.toLowerCase()
     this._currentWidthFactor = options.widthFactor
     this._currentWordSpace = 1
-    this._currentColor = style.color
+    this._currentColor = options.byLayerColor
     this._currentFontSizeScaleFactor = 1
     this._currentMaxFontSize = 0
     this.initLineParams()
@@ -279,11 +287,15 @@ export class MTextLines extends BaseText {
         }
       case 'C':
         if (item.changes.aci) {
-          tempColor.colorIndex = item.changes.aci
-          this._currentColor = tempColor.color
+          if (item.changes.aci === 0) {
+            this._currentColor = this._options.byBlockColor
+          } else if (item.changes.aci === 256) {
+            this._currentColor = this._options.byLayerColor
+          } else {
+            this._currentColor = getColorByIndex(item.changes.aci)
+          }
         } else if (item.changes.rgb) {
-          tempColor. = item.changes.rgb
-          this._currentColor = tempColor.color
+          this._currentColor = (item.changes.rgb[0] << 16) + (item.changes.rgb[1] << 8) + item.changes.rgb[2]
         }
         break;
       case 'W':
@@ -339,11 +351,11 @@ export class MTextLines extends BaseText {
         const words = token.data;
         if (Array.isArray(words)) {
           words.forEach(word => this.processWord(word, geometries))
-        } else if (words && words.length > 0) {
+        } else if (typeof words === 'string' && words.length > 0) {
           this.processWord(words, geometries)
         }
       } else if (token.type === TokenType.PROPERTIES_CHANGED) {
-        this.processFormat(token.data)
+        this.processFormat(token.data as ChangedProperties)
       }
     }
 
@@ -353,7 +365,6 @@ export class MTextLines extends BaseText {
     }
 
     const object = this.toThreeObject(geometries)
-    object.userData.text = item
     this._currentLineObjects.push(object)
     return object
   }
@@ -390,10 +401,7 @@ export class MTextLines extends BaseText {
 
     // If the horizontal alignment is distributed, just ignore wordspace.
     // Wordspace will be calcualted in method 'processAlignment'.
-    if (
-      this.currentHorizontalAlignment ==
-      TextHorizontalAlignment.Distributed
-    ) {
+    if (this.currentHorizontalAlignment == MTextParagraphAlignment.DISTRIBUTED) {
       this._hOffset += shape.width * this.currentWidthFactor
     } else {
       this._hOffset +=
@@ -524,17 +532,17 @@ export class MTextLines extends BaseText {
     if (bbox) {
       const size = bbox.getSize(tempVector)
       switch (this.currentHorizontalAlignment) {
-        case TextHorizontalAlignment.Left:
+        case MTextParagraphAlignment.LEFT:
           break
-        case TextHorizontalAlignment.Center:
+        case MTextParagraphAlignment.CENTER:
           geometries.forEach(g =>
             g.translate((this.maxWidth - size.x) / 2, 0, 0)
           )
           break
-        case TextHorizontalAlignment.Right:
+        case MTextParagraphAlignment.RIGHT:
           geometries.forEach(g => g.translate(this.maxWidth - size.x, 0, 0))
           break
-        case TextHorizontalAlignment.Distributed:
+        case MTextParagraphAlignment.DISTRIBUTED:
           if (geometries.length > 1) {
             const gap = (this.maxWidth - size.x) / (geometries.length - 1)
             for (let k = 1; k < geometries.length; k++) {

@@ -59,3 +59,4 @@ export interface TextStyle {
   color: number;
 }
 
+

@@ -1,33 +1,29 @@
-import * as THREE from 'three'
+import * as THREE from 'three';
 
-import { FontManager } from '../font'
-import { BaseText } from './baseText'
+import { FontManager } from '../font';
+import { BaseText } from './baseText';
+import { MTextAttachmentPoint, MTextData, MTextFlowDirection, Point2d, TextStyle } from './types';
+
+import { StyleManager } from './styleManager';
+import { MTextLines, TextLineFormatOptions } from './line';
 import {
-  MTextAttachmentPoint,
-  MTextData,
-  MTextFlowDirection,
-  Point2d,
-  TextStyle
-} from './types'
+  MTextContext,
+  MTextLineAlignment,
+  MTextParagraphAlignment,
+  MTextParser,
+  MTextToken,
+} from '@mlightcad/mtext-parser';
 
-import { StyleManager } from './styleManager'
-import {
-  MTextLines,
-  TextLineFormatOptions
-} from './line'
-import { MTextContext, MTextLineAlignment, MTextParagraphAlignment, MTextParser, MTextToken } from '@mlightcad/mtext-parser'
-import { Point } from '@mlightcad/shx-parser'
-
-const tempPoint = /*@__PURE__*/ new THREE.Vector3()
-const tempVector = /*@__PURE__*/ new THREE.Vector3()
-const tempScale = /*@__PURE__*/ new THREE.Vector3()
-const tempQuaternion = /*@__PURE__*/ new THREE.Quaternion()
-const translateTempMatrix = /*@__PURE__*/ new THREE.Matrix4()
-const tempMatrix = /*@__PURE__*/ new THREE.Matrix4()
-const AxisX = /*@__PURE__*/ new THREE.Vector3(1, 0, 0)
+const tempPoint = /*@__PURE__*/ new THREE.Vector3();
+const tempVector = /*@__PURE__*/ new THREE.Vector3();
+const tempScale = /*@__PURE__*/ new THREE.Vector3();
+const tempQuaternion = /*@__PURE__*/ new THREE.Quaternion();
+const translateTempMatrix = /*@__PURE__*/ new THREE.Matrix4();
+const tempMatrix = /*@__PURE__*/ new THREE.Matrix4();
+const AxisX = /*@__PURE__*/ new THREE.Vector3(1, 0, 0);
 
 export class MText extends BaseText {
-  private _boxes: THREE.Box3[]
+  private _boxes: THREE.Box3[];
 
   constructor(
     text: MTextData,
@@ -35,13 +31,13 @@ export class MText extends BaseText {
     styleManager: StyleManager,
     fontManager: FontManager
   ) {
-    super(style, styleManager, fontManager)
-    this._boxes = []
-    const obj = this.loadMText(text, style)
+    super(style, styleManager, fontManager);
+    this._boxes = [];
+    const obj = this.loadMText(text, style);
     if (obj) {
-      this.getBoxes(obj, this._boxes)
-      this._boxes.forEach(box => this.box.union(box))
-      this.add(obj)
+      this.getBoxes(obj, this._boxes);
+      this._boxes.forEach((box) => this.box.union(box));
+      this.add(obj);
     }
   }
 
@@ -50,10 +46,10 @@ export class MText extends BaseText {
    * to calculate intersection using the bounding box of texts.
    */
   raycast(raycaster: THREE.Raycaster, intersects: THREE.Intersection[]) {
-    this._boxes.forEach(box => {
+    this._boxes.forEach((box) => {
       // Check for intersection with the bounding box
       if (raycaster.ray.intersectBox(box, tempPoint)) {
-        const distance = raycaster.ray.origin.distanceTo(tempPoint)
+        const distance = raycaster.ray.origin.distanceTo(tempPoint);
         // Push intersection details
         intersects.push({
           distance: distance,
@@ -61,33 +57,33 @@ export class MText extends BaseText {
           object: this,
           face: null,
           faceIndex: undefined,
-          uv: undefined
-        })
+          uv: undefined,
+        });
       }
-    })
+    });
   }
 
   private loadMText(mtextData: MTextData, style: TextStyle) {
-    const { object, height } = this.createMTextGroup(mtextData, style)
+    const { object, height } = this.createMTextGroup(mtextData, style);
     if (!object) {
-      return undefined
+      return undefined;
     }
 
-    object.matrix.decompose(tempVector, tempQuaternion, tempScale)
+    object.matrix.decompose(tempVector, tempQuaternion, tempScale);
     if (mtextData.position) {
-      tempVector.x += mtextData.position.x
-      tempVector.y += mtextData.position.y
+      tempVector.x += mtextData.position.x;
+      tempVector.y += mtextData.position.y;
       // object.position.z += entity.position.z;
-      object.matrix.compose(tempVector, tempQuaternion, tempScale)
+      object.matrix.compose(tempVector, tempQuaternion, tempScale);
     }
 
-    const width = mtextData.width
+    const width = mtextData.width;
     const anchorPoint = this.calculateAnchorPoint(
       width,
       height,
       mtextData.attachmentPoint,
       mtextData.drawingDirection
-    )
+    );
 
     // const textAlign = content.style.horizontalAlignment;
     // switch (textAlign) {
@@ -106,22 +102,22 @@ export class MText extends BaseText {
     //         break;
     // }
     // object.geometry.translate(anchorX, anchorY, 0);
-    object.traverse(obj => {
+    object.traverse((obj) => {
       if ('geometry' in obj) {
-        const geometry = obj.geometry as THREE.BufferGeometry
-        geometry.translate(anchorPoint.x, anchorPoint.y, 0)
+        const geometry = obj.geometry as THREE.BufferGeometry;
+        geometry.translate(anchorPoint.x, anchorPoint.y, 0);
       }
-      obj.layers.enableAll()
-    })
+      obj.layers.enableAll();
+    });
 
-    let rotateAngle = mtextData.rotation || 0
+    let rotateAngle = mtextData.rotation || 0;
     if (mtextData.directionVector) {
-      const dv = mtextData.directionVector
-      const vec = new THREE.Vector3(dv.x, dv.y, dv.z)
-      const v = vec.clone().cross(AxisX)
-      const angle = AxisX.angleTo(vec)
+      const dv = mtextData.directionVector;
+      const vec = new THREE.Vector3(dv.x, dv.y, dv.z);
+      const v = vec.clone().cross(AxisX);
+      const angle = AxisX.angleTo(vec);
       //object.rotateZ(v.z > 0 ? -angle : angle);
-      rotateAngle = v.z > 0 ? -angle : angle
+      rotateAngle = v.z > 0 ? -angle : angle;
     }
 
     // for offset
@@ -136,65 +132,59 @@ export class MText extends BaseText {
     //   this.setRTCUserData(object)
     // }
 
-    object.matrix.compose(tempVector, tempQuaternion, tempScale)
-    const translate = mtextData.position
-      ? tempVector.clone().sub(mtextData.position)
-      : tempVector
-    translateTempMatrix.makeTranslation(-translate.x, -translate.y, 0)
-    tempMatrix.makeRotationZ(rotateAngle)
-    object.matrix.multiply(translateTempMatrix)
-    object.matrix.multiply(tempMatrix)
-    object.matrix.multiply(translateTempMatrix.invert())
+    object.matrix.compose(tempVector, tempQuaternion, tempScale);
+    const translate = mtextData.position ? tempVector.clone().sub(mtextData.position) : tempVector;
+    translateTempMatrix.makeTranslation(-translate.x, -translate.y, 0);
+    tempMatrix.makeRotationZ(rotateAngle);
+    object.matrix.multiply(translateTempMatrix);
+    object.matrix.multiply(tempMatrix);
+    object.matrix.multiply(translateTempMatrix.invert());
     // for debug
     // const test = new THREE.Line(new THREE.CircleGeometry(3), new THREE.LineBasicMaterial({ color: 0x00ff00 }));
     // object.add(test);
     //object.renderOrder = DxfRenderOrder.Text;
-    object.matrix.decompose(object.position, object.quaternion, object.scale)
-    return object
+    object.matrix.decompose(object.position, object.quaternion, object.scale);
+    return object;
   }
 
-  private createMTextGroup(
-    mtextData: MTextData,
-    style: TextStyle
-  ) {
+  private createMTextGroup(mtextData: MTextData, style: TextStyle) {
     // no font is exactly supported for now, we'll always use the loaded font with single line texts.
     if (style && style.font && style.font.endsWith('.shx')) {
-      const fontFileAndStyleName = `${style.font}_${style.name}`
+      const fontFileAndStyleName = `${style.font}_${style.name}`;
       if (!this.styleManager.unsupportedTextStyles[fontFileAndStyleName]) {
-        this.styleManager.unsupportedTextStyles[fontFileAndStyleName] = 0
+        this.styleManager.unsupportedTextStyles[fontFileAndStyleName] = 0;
       }
-      this.styleManager.unsupportedTextStyles[fontFileAndStyleName]++
+      this.styleManager.unsupportedTextStyles[fontFileAndStyleName]++;
     }
 
     // TODO: Calculate this value based on reference rectangle width (DXF group code 41) and
     // horizontal width of the characters (DXF group code 42)
-    const maxWidth = mtextData.width || 0
-    let horizontalAlignment = MTextParagraphAlignment.LEFT
+    const maxWidth = mtextData.width || 0;
+    let horizontalAlignment = MTextParagraphAlignment.LEFT;
     if (mtextData.width && mtextData.attachmentPoint) {
       if ([1, 4, 7].includes(mtextData.attachmentPoint)) {
-        horizontalAlignment = MTextParagraphAlignment.LEFT
+        horizontalAlignment = MTextParagraphAlignment.LEFT;
       } else if ([2, 5, 8].includes(mtextData.attachmentPoint)) {
-        horizontalAlignment = MTextParagraphAlignment.CENTER
+        horizontalAlignment = MTextParagraphAlignment.CENTER;
       } else if ([3, 6, 9].includes(mtextData.attachmentPoint)) {
-        horizontalAlignment = MTextParagraphAlignment.RIGHT
+        horizontalAlignment = MTextParagraphAlignment.RIGHT;
       }
     }
 
-    let verticalAlignment = MTextLineAlignment.BOTTOM
+    let verticalAlignment = MTextLineAlignment.BOTTOM;
     if (mtextData.attachmentPoint) {
       if ([1, 2, 3].includes(mtextData.attachmentPoint)) {
-        verticalAlignment = MTextLineAlignment.TOP
+        verticalAlignment = MTextLineAlignment.TOP;
       } else if ([4, 5, 6].includes(mtextData.attachmentPoint)) {
-        verticalAlignment = MTextLineAlignment.MIDDLE
+        verticalAlignment = MTextLineAlignment.MIDDLE;
       } else if ([7, 8, 9].includes(mtextData.attachmentPoint)) {
-        verticalAlignment = MTextLineAlignment.BOTTOM
+        verticalAlignment = MTextLineAlignment.BOTTOM;
       }
     }
 
-    const defaultFontSize = mtextData.height || 0
-    const defaultLineSpaceFactor = mtextData.lineSpaceFactor || 0.3
-    const flowDirection =
-      mtextData.drawingDirection ?? MTextFlowDirection.LEFT_TO_RIGHT
+    const defaultFontSize = mtextData.height || 0;
+    const defaultLineSpaceFactor = mtextData.lineSpaceFactor || 0.3;
+    const flowDirection = mtextData.drawingDirection ?? MTextFlowDirection.LEFT_TO_RIGHT;
     const textLineFormatOptions: TextLineFormatOptions = {
       fontSize: defaultFontSize,
       widthFactor: mtextData.widthFactor ?? 1,
@@ -203,8 +193,8 @@ export class MText extends BaseText {
       maxWidth: maxWidth,
       flowDirection: flowDirection,
       byBlockColor: 0xffffff,
-      byLayerColor: 0xffffff
-    }
+      byLayerColor: 0xffffff,
+    };
 
     const context = new MTextContext();
     context.fontFace.family = style.font;
@@ -220,28 +210,25 @@ export class MText extends BaseText {
       this.styleManager,
       this.fontManager,
       textLineFormatOptions
-    )
-    const object = this.getMTextGroup(tokens, textLine)
-    textLine.processLastLine()
+    );
+    const object = this.getMTextGroup(tokens, textLine);
+    textLine.processLastLine();
     return {
       object: object,
-      height: textLine.totalHeight
-    }
+      height: textLine.totalHeight,
+    };
   }
 
-  private getMTextGroup(
-    tokens: Generator<MTextToken>,
-    textLine: MTextLines
-  ) {
-    const mtext = textLine.processText(tokens)
+  private getMTextGroup(tokens: Generator<MTextToken>, textLine: MTextLines) {
+    const mtext = textLine.processText(tokens);
     if (mtext.children.length === 0) {
-      return undefined
+      return undefined;
     }
     // reduce hierarchy
     if (mtext.children.length === 1) {
-      return mtext.children[0]
+      return mtext.children[0];
     } else {
-      return mtext
+      return mtext;
     }
   }
 
@@ -260,80 +247,80 @@ export class MText extends BaseText {
     flowDirection?: MTextFlowDirection
   ): Point2d {
     let anchorX = 0,
-      anchorY = 0
+      anchorY = 0;
     switch (attachmentPoint) {
       case undefined:
       case 1:
         // Top Left
-        anchorX = 0
-        anchorY = 0
-        break
+        anchorX = 0;
+        anchorY = 0;
+        break;
       case 2:
         // Top Center
-        anchorX -= width / 2
-        anchorY = 0
-        break
+        anchorX -= width / 2;
+        anchorY = 0;
+        break;
       case 3:
         // Top Right
-        anchorX -= width
-        anchorY = 0
-        break
+        anchorX -= width;
+        anchorY = 0;
+        break;
       case 4:
         // Middle Left
-        anchorX = 0
-        anchorY += height / 2
-        break
+        anchorX = 0;
+        anchorY += height / 2;
+        break;
       case 5:
         // Middle Center
-        anchorX -= width / 2
-        anchorY += height / 2
-        break
+        anchorX -= width / 2;
+        anchorY += height / 2;
+        break;
       case 6:
         // Middle Right
-        anchorX -= width
-        anchorY += height / 2
-        break
+        anchorX -= width;
+        anchorY += height / 2;
+        break;
       case 7:
         // Bottom Left
-        anchorX = 0
-        anchorY += height
-        break
+        anchorX = 0;
+        anchorY += height;
+        break;
       case 8:
         // Bottom Center
-        anchorX -= width / 2
-        anchorY += height
-        break
+        anchorX -= width / 2;
+        anchorY += height;
+        break;
       case 9:
         // Bottom Right
-        anchorX -= width
-        anchorY += height
-        break
+        anchorX -= width;
+        anchorY += height;
+        break;
     }
     if (flowDirection == MTextFlowDirection.BOTTOM_TO_TOP) {
-      anchorY -= height
+      anchorY -= height;
     }
-    return { x: anchorX, y: anchorY }
+    return { x: anchorX, y: anchorY };
   }
 
   private getBoxes(object: THREE.Object3D, boxes: THREE.Box3[]) {
     // Computes the world-axis-aligned bounding box of an object (including its children),
     // accounting for both the object's, and children's, world transforms
-    object.updateWorldMatrix(false, false)
+    object.updateWorldMatrix(false, false);
     if (object instanceof THREE.Line || object instanceof THREE.Mesh) {
-      const geometry = object.geometry
+      const geometry = object.geometry;
 
       // geometry-level bounding box
       if (geometry.boundingBox === null) {
-        geometry.computeBoundingBox()
+        geometry.computeBoundingBox();
       }
-      const box = new THREE.Box3().copy(geometry.boundingBox)
-      box.applyMatrix4(object.matrixWorld)
-      boxes.push(box)
+      const box = new THREE.Box3().copy(geometry.boundingBox);
+      box.applyMatrix4(object.matrixWorld);
+      boxes.push(box);
     }
 
-    const children = object.children
+    const children = object.children;
     for (let i = 0, l = children.length; i < l; i++) {
-      this.getBoxes(children[i], boxes)
+      this.getBoxes(children[i], boxes);
     }
   }
 }

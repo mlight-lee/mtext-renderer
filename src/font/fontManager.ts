@@ -129,7 +129,7 @@ export class FontManager {
     if (!currentFont) {
       this.recordMissedFonts(fontName);
       // Try all fonts until we find one that can render the character
-      for (const [_f, font] of this.fontMap) {
+      for (const [, font] of this.fontMap) {
         const s = font.getCharShape(char, size);
         if (s) {
           currentFont = font;
@@ -146,7 +146,7 @@ export class FontManager {
   }
 
   getNotFoundTextShape(size: number) {
-    for (const [_f, font] of this.fontMap) {
+    for (const [, font] of this.fontMap) {
       const s = font.getNotFoundTextShape(size);
       if (s) return s;
     }
@@ -184,7 +184,7 @@ export class FontManager {
         }
       }
     }
-    
+
     this.events.fontLoaded.dispatch({
       fontName: fileName,
     });
@@ -209,7 +209,7 @@ export class FontManager {
    * Just for log usage
    */
   public getUnsupportedChar() {
-    for (const [_f, font] of this.fontMap) {
+    for (const [, font] of this.fontMap) {
       Object.assign(this.unsupportedChars, font.unsupportedChars);
     }
     return this.unsupportedChars;

@@ -7,7 +7,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "vite build",
-    "dev": "vite",
+    "build:example": "vite build --config examples/vite.config.ts",
+    "example": "npm run build:example && vite --config examples/vite.config.ts",
     "test": "jest",
     "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\"",
     "lint:fix": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --fix",
@@ -36,6 +37,7 @@
     "@types/three": "^0.172.0",
     "@typescript-eslint/eslint-plugin": "^8.32.1",
     "@typescript-eslint/parser": "^8.32.1",
+    "cp-cli": "^2.0.0",
     "eslint": "^9.26.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.0",

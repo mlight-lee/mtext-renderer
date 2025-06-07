@@ -3,9 +3,6 @@ import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig({
-  server: {
-    port: 3000,
-  },
   build: {
     outDir: 'dist',
     lib: {

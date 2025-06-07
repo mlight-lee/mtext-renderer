@@ -11,7 +11,6 @@ import {
   MTextLineAlignment,
   MTextParagraphAlignment,
   MTextParser,
-  MTextToken,
 } from '@mlightcad/mtext-parser';
 
 const tempPoint = /*@__PURE__*/ new THREE.Vector3();
@@ -211,25 +210,12 @@ export class MText extends BaseText {
       this.fontManager,
       textLineFormatOptions
     );
-    const object = this.getMTextGroup(tokens, textLine);
+    const object = textLine.processText(tokens);
     textLine.processLastLine();
     return {
       object: object,
       height: textLine.totalHeight,
     };
-  }
-
-  private getMTextGroup(tokens: Generator<MTextToken>, textLine: MTextLines) {
-    const mtext = textLine.processText(tokens);
-    if (mtext.children.length === 0) {
-      return undefined;
-    }
-    // reduce hierarchy
-    if (mtext.children.length === 1) {
-      return mtext.children[0];
-    } else {
-      return mtext;
-    }
   }
 
   /**

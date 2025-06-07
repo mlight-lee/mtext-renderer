@@ -1,16 +1,21 @@
 import { MTextParser, MTextContext } from '@mlightcad/mtext-parser';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { MText } from '../src/renderer/mext';
 import { FontManager } from '../src/font';
 import { StyleManager } from '../src/renderer/styleManager';
+import { DefaultFontLoader } from '../src/font/defaultFontLoader';
 
 class MTextRendererExample {
     private scene: THREE.Scene;
     private camera: THREE.OrthographicCamera;
     private renderer: THREE.WebGLRenderer;
+    private controls: OrbitControls;
     private fontManager: FontManager;
     private styleManager: StyleManager;
     private currentMText: MText | null = null;
+    private fontLoader: DefaultFontLoader;
+    private mtextBox: THREE.LineSegments | null = null;
 
     // DOM elements
     private mtextInput: HTMLTextAreaElement;
@@ -18,10 +23,7 @@ class MTextRendererExample {
     private renderBtn: HTMLButtonElement;
     private statusDiv: HTMLDivElement;
     private fontSelect: HTMLSelectElement;
-
-    // Font library URL
-    private readonly fontBaseUrl = 'https://raw.githubusercontent.com/mlight-lee/cad-data/main/fonts/';
-    private readonly fontLibraryUrl = `${this.fontBaseUrl}fonts.json`;
+    private showBoundingBoxCheckbox: HTMLInputElement;
 
     constructor() {
         // Initialize Three.js components
@@ -29,8 +31,14 @@ class MTextRendererExample {
         this.scene.background = new THREE.Color(0x333333);
 
         // Use orthographic camera for 2D rendering
-        const aspect = window.innerWidth / window.innerHeight;
+        const renderArea = document.getElementById('render-area');
+        if (!renderArea) return;
+        
+        const width = renderArea.clientWidth;
+        const height = renderArea.clientHeight;
+        const aspect = width / height;
         const frustumSize = 10;
+        
         this.camera = new THREE.OrthographicCamera(
             frustumSize * aspect / -2,
             frustumSize * aspect / 2,
@@ -42,12 +50,22 @@ class MTextRendererExample {
         this.camera.position.z = 5;
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(this.renderer.domElement);
+        this.renderer.setSize(width, height);
+        renderArea.appendChild(this.renderer.domElement);
 
-        // Initialize managers
+        // Add orbit controls
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.05;
+        this.controls.screenSpacePanning = true;
+        this.controls.minDistance = 1;
+        this.controls.maxDistance = 50;
+        this.controls.maxPolarAngle = Math.PI / 2;
+
+        // Initialize managers and loader
         this.fontManager = FontManager.instance;
         this.styleManager = new StyleManager();
+        this.fontLoader = new DefaultFontLoader();
 
         // Get DOM elements
         this.mtextInput = document.getElementById('mtext-input') as HTMLTextAreaElement;
@@ -55,6 +73,7 @@ class MTextRendererExample {
         this.renderBtn = document.getElementById('render-btn') as HTMLButtonElement;
         this.statusDiv = document.getElementById('status') as HTMLDivElement;
         this.fontSelect = document.getElementById('font-select') as HTMLSelectElement;
+        this.showBoundingBoxCheckbox = document.getElementById('show-bounding-box') as HTMLInputElement;
 
         // Add lights
         this.setupLights();
@@ -62,11 +81,11 @@ class MTextRendererExample {
         // Setup event listeners
         this.setupEventListeners();
 
-        // Load font library
-        this.loadFontLibrary();
-
-        // Initial render
-        this.renderMText(this.mtextInput.value);
+        // Initialize fonts and UI, then render
+        this.initializeFonts().then(() => {
+            // Initial render after fonts are loaded
+            this.renderMText(this.mtextInput.value);
+        });
 
         // Start animation loop
         this.animate();
@@ -84,14 +103,20 @@ class MTextRendererExample {
     private setupEventListeners(): void {
         // Window resize
         window.addEventListener('resize', () => {
-            const aspect = window.innerWidth / window.innerHeight;
+            const renderArea = document.getElementById('render-area');
+            if (!renderArea) return;
+            
+            const width = renderArea.clientWidth;
+            const height = renderArea.clientHeight;
+            const aspect = width / height;
             const frustumSize = 10;
+            
             this.camera.left = frustumSize * aspect / -2;
             this.camera.right = frustumSize * aspect / 2;
             this.camera.top = frustumSize / 2;
             this.camera.bottom = frustumSize / -2;
             this.camera.updateProjectionMatrix();
-            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.setSize(width, height);
         });
 
         // Validate button
@@ -122,27 +147,55 @@ class MTextRendererExample {
                 this.renderMText(content);
             }
         });
+
+        // Bounding box toggle
+        this.showBoundingBoxCheckbox.addEventListener('change', () => {
+            if (this.mtextBox) {
+                if (this.showBoundingBoxCheckbox.checked) {
+                    // If checkbox is checked and we have MText, create and show the box
+                    if (this.currentMText && this.currentMText.box && !this.currentMText.box.isEmpty()) {
+                        const box = this.createMTextBox(this.currentMText.box);
+                        this.scene.add(box);
+                    }
+                } else {
+                    // If checkbox is unchecked, remove the box from scene
+                    this.scene.remove(this.mtextBox);
+                    this.mtextBox = null;
+                }
+            }
+        });
     }
 
-    private async loadFontLibrary(): Promise<void> {
+    private async initializeFonts(): Promise<void> {
         try {
-            const response = await fetch(this.fontLibraryUrl);
-            if (!response.ok) throw new Error('Failed to load font library');
-            const fonts = await response.json();
+            // Load available fonts for the dropdown
+            const fonts = await this.fontLoader.getAvaiableFonts();
+
+            // Load default fonts
+            await this.fontLoader.load([this.fontManager.defaultFont]);
             
-            // Clear existing options except the first one
-            this.fontSelect.innerHTML = '<option value="Arial">Arial</option>';
+            // Clear existing options
+            this.fontSelect.innerHTML = '';
             
+            // Add all available fonts to dropdown
             fonts.forEach(font => {
                 const option = document.createElement('option');
-                option.value = font.file;
-                option.textContent = font.name;
+                option.value = font.name[0];
+                option.textContent = font.name[0]; // Use the first name from the array
+                // Set selected if this is the default font
+                if (font.name[0] === this.fontManager.defaultFont) {
+                    option.selected = true;
+                }
                 this.fontSelect.appendChild(option);
             });
+
+            this.statusDiv.textContent = 'Fonts loaded successfully';
+            this.statusDiv.style.color = '#0f0';
         } catch (error) {
-            console.error('Error loading font library:', error);
-            this.statusDiv.textContent = 'Error loading font library';
+            console.error('Error loading fonts:', error);
+            this.statusDiv.textContent = 'Error loading fonts';
             this.statusDiv.style.color = '#f00';
+            throw error; // Re-throw to handle in the constructor
         }
     }
 
@@ -155,6 +208,36 @@ class MTextRendererExample {
         } catch (error) {
             return false;
         }
+    }
+
+    private createMTextBox(box: THREE.Box3): THREE.LineSegments {
+        // Remove existing box if any
+        if (this.mtextBox) {
+            this.scene.remove(this.mtextBox);
+        }
+
+        // Create box geometry
+        const geometry = new THREE.BufferGeometry();
+        const min = box.min;
+        const max = box.max;
+        const vertices = new Float32Array([
+            min.x, min.y, 0,  // bottom left
+            max.x, min.y, 0,  // bottom right
+            max.x, max.y, 0,  // top right
+            min.x, max.y, 0,  // top left
+            min.x, min.y, 0   // back to bottom left
+        ]);
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+        // Create line material
+        const material = new THREE.LineBasicMaterial({ 
+            color: 0x00ff00,
+            linewidth: 1
+        });
+
+        // Create line segments
+        this.mtextBox = new THREE.LineSegments(geometry, material);
+        return this.mtextBox;
     }
 
     private renderMText(content: string): void {
@@ -185,10 +268,17 @@ class MTextRendererExample {
         }, this.styleManager, this.fontManager);
 
         this.scene.add(this.currentMText);
+
+        // Create box around MText using its bounding box only if checkbox is checked
+        if (this.showBoundingBoxCheckbox.checked && this.currentMText.box && !this.currentMText.box.isEmpty()) {
+            const box = this.createMTextBox(this.currentMText.box);
+            this.scene.add(box);
+        }
     }
 
     private animate(): void {
         requestAnimationFrame(() => this.animate());
+        this.controls.update();
         this.renderer.render(this.scene, this.camera);
     }
 }

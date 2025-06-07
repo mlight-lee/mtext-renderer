@@ -5,18 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MText Renderer Example</title>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
-        #controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            background: rgba(0,0,0,0.5);
-            padding: 10px;
-            border-radius: 5px;
+        body { 
+            margin: 0; 
+            padding: 20px;
             font-family: Arial, sans-serif;
-            width: 300px;
+        }
+        #controls {
+            width: 800px;
+            background: #333;
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #render-area {
+            width: 800px;
+            height: 600px;
+            position: relative;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        canvas { 
+            display: block;
+            width: 100%;
+            height: 100%;
         }
         #mtext-input {
             width: 100%;
@@ -43,6 +57,18 @@
             margin-top: 10px;
             color: #ff0;
         }
+        h2 {
+            margin-top: 0;
+            color: #fff;
+        }
+        .checkbox-container {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-container input[type="checkbox"] {
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -56,9 +82,13 @@
             <button id="validate-btn">Validate</button>
             <button id="render-btn">Render</button>
         </div>
+        <div class="checkbox-container">
+            <input type="checkbox" id="show-bounding-box" checked>
+            <label for="show-bounding-box">Show Bounding Box</label>
+        </div>
         <div id="status"></div>
-        <p>Use mouse to rotate the view</p>
     </div>
+    <div id="render-area"></div>
     <!-- Load bundled example -->
     <script type="module" src="./dist/main.js"></script>
 </body>

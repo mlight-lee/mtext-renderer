@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { BaseFont } from './baseFont';
 import { BaseTextShape } from './baseTextShape';
 import { FontCacheManager } from '../cache';
-import { EventManager, getFileNameWithoutExtension } from '../common';
+import { EventManager, getFileName, getFileNameWithoutExtension } from '../common';
 import { FontData } from './font';
 import { FontFactory } from './fontFactory';
 import { FontLoadStatus } from './fontLoader';
@@ -34,7 +34,7 @@ export class FontManager {
   protected fileNames: string[];
   public unsupportedChars: Record<string, number> = {};
   public missedFonts: Record<string, number> = {};
-  public enableFontCache = true;
+  public enableFontCache = false;
   /**
    * Default font. If the specified font can't be found, the default font will be used
    * when rendering texts.
@@ -48,6 +48,7 @@ export class FontManager {
 
   private constructor() {
     this.loader = new THREE.FileLoader();
+    this.loader.setResponseType('arraybuffer');
     this.fileNames = [];
   }
 
@@ -167,26 +168,30 @@ export class FontManager {
   }
 
   private async loadFont(url: string) {
-    const fileName = getFileNameWithoutExtension(url).toLowerCase();
-    const data = await FontCacheManager.instance.get(fileName);
+    const fileName = getFileName(url);
+    if (!fileName) {
+      throw new Error(`Invalid font url: ${url}`);
+    }
 
-    let font: BaseFont | undefined;
+    const fontName = getFileNameWithoutExtension(url).toLowerCase();
+    const data = await FontCacheManager.instance.get(fontName);
+
     if (data) {
-      font = FontFactory.instance.createFont(data);
-      this.fontMap.set(fileName, font);
+      const font = FontFactory.instance.createFont(data);
+      this.fontMap.set(fontName, font);
     } else {
+      const buffer = (await this.loader.loadAsync(url)) as ArrayBuffer;
+      const font = FontFactory.instance.createFontFromBuffer(fileName, buffer);
       if (font) {
-        this.fontMap.set(fileName, font);
+        this.fontMap.set(fontName, font);
         if (this.enableFontCache) {
-          const buffer = (await this.loader.loadAsync(url)) as ArrayBuffer;
-          const font = FontFactory.instance.createFontFromBuffer(fileName, buffer);
-          await FontCacheManager.instance.set(fileName, font.data as FontData);
+          await FontCacheManager.instance.set(fontName, font.data as FontData);
         }
       }
     }
 
     this.events.fontLoaded.dispatch({
-      fontName: fileName,
+      fontName: fontName,
     });
   }
 

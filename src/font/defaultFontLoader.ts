@@ -40,7 +40,9 @@ export class DefaultFontLoader implements FontLoader {
    * @inheritdoc
    */
   async load(fontNames: string[]) {
-    await this.getAvaiableFonts();
+    if (fontNames.length == 0) {
+      await this.getAvaiableFonts();
+    }
 
     const urls: string[] = [];
     fontNames.forEach((font) => {

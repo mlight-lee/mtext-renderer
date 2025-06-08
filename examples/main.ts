@@ -79,10 +79,16 @@ class MTextRendererExample {
     this.setupEventListeners();
 
     // Initialize fonts and UI, then render
-    this.initializeFonts().then(() => {
-      // Initial render after fonts are loaded
-      this.renderMText(this.mtextInput.value);
-    });
+    this.initializeFonts()
+      .then(() => {
+        // Initial render after fonts are loaded
+        this.renderMText(this.mtextInput.value);
+      })
+      .catch((error) => {
+        console.error('Failed to initialize fonts:', error);
+        this.statusDiv.textContent = 'Failed to initialize fonts';
+        this.statusDiv.style.color = '#f00';
+      });
 
     // Start animation loop
     this.animate();

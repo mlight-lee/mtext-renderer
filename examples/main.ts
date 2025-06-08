@@ -1,4 +1,3 @@
-import { MTextParser, MTextContext } from '@mlightcad/mtext-parser';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { MText } from '../src/renderer/mext';
@@ -19,7 +18,6 @@ class MTextRendererExample {
 
   // DOM elements
   private mtextInput: HTMLTextAreaElement;
-  private validateBtn: HTMLButtonElement;
   private renderBtn: HTMLButtonElement;
   private statusDiv: HTMLDivElement;
   private fontSelect: HTMLSelectElement;
@@ -69,7 +67,6 @@ class MTextRendererExample {
 
     // Get DOM elements
     this.mtextInput = document.getElementById('mtext-input') as HTMLTextAreaElement;
-    this.validateBtn = document.getElementById('validate-btn') as HTMLButtonElement;
     this.renderBtn = document.getElementById('render-btn') as HTMLButtonElement;
     this.statusDiv = document.getElementById('status') as HTMLDivElement;
     this.fontSelect = document.getElementById('font-select') as HTMLSelectElement;
@@ -119,25 +116,12 @@ class MTextRendererExample {
       this.renderer.setSize(width, height);
     });
 
-    // Validate button
-    this.validateBtn.addEventListener('click', () => {
-      const content = this.mtextInput.value;
-      const isValid = this.validateMText(content);
-      this.statusDiv.textContent = isValid ? 'Valid MText content' : 'Invalid MText content';
-      this.statusDiv.style.color = isValid ? '#0f0' : '#f00';
-    });
-
     // Render button
     this.renderBtn.addEventListener('click', () => {
       const content = this.mtextInput.value;
-      if (this.validateMText(content)) {
-        this.renderMText(content);
-        this.statusDiv.textContent = 'MText rendered successfully';
-        this.statusDiv.style.color = '#0f0';
-      } else {
-        this.statusDiv.textContent = 'Cannot render invalid MText content';
-        this.statusDiv.style.color = '#f00';
-      }
+      this.renderMText(content);
+      this.statusDiv.textContent = 'MText rendered successfully';
+      this.statusDiv.style.color = '#0f0';
     });
 
     // Font selection
@@ -204,17 +188,6 @@ class MTextRendererExample {
       this.statusDiv.textContent = 'Error loading fonts';
       this.statusDiv.style.color = '#f00';
       throw error; // Re-throw to handle in the constructor
-    }
-  }
-
-  private validateMText(content: string): boolean {
-    try {
-      const context = new MTextContext();
-      const parser = new MTextParser(content, context, true);
-      parser.parse();
-      return true;
-    } catch (error) {
-      return false;
     }
   }
 

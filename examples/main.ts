@@ -7,281 +7,308 @@ import { StyleManager } from '../src/renderer/styleManager';
 import { DefaultFontLoader } from '../src/font/defaultFontLoader';
 
 class MTextRendererExample {
-    private scene: THREE.Scene;
-    private camera: THREE.OrthographicCamera;
-    private renderer: THREE.WebGLRenderer;
-    private controls: OrbitControls;
-    private fontManager: FontManager;
-    private styleManager: StyleManager;
-    private currentMText: MText | null = null;
-    private fontLoader: DefaultFontLoader;
-    private mtextBox: THREE.LineSegments | null = null;
+  private scene: THREE.Scene;
+  private camera: THREE.OrthographicCamera;
+  private renderer: THREE.WebGLRenderer;
+  private controls: OrbitControls;
+  private fontManager: FontManager;
+  private styleManager: StyleManager;
+  private currentMText: MText | null = null;
+  private fontLoader: DefaultFontLoader;
+  private mtextBox: THREE.LineSegments | null = null;
 
-    // DOM elements
-    private mtextInput: HTMLTextAreaElement;
-    private validateBtn: HTMLButtonElement;
-    private renderBtn: HTMLButtonElement;
-    private statusDiv: HTMLDivElement;
-    private fontSelect: HTMLSelectElement;
-    private showBoundingBoxCheckbox: HTMLInputElement;
+  // DOM elements
+  private mtextInput: HTMLTextAreaElement;
+  private validateBtn: HTMLButtonElement;
+  private renderBtn: HTMLButtonElement;
+  private statusDiv: HTMLDivElement;
+  private fontSelect: HTMLSelectElement;
+  private showBoundingBoxCheckbox: HTMLInputElement;
 
-    constructor() {
-        // Initialize Three.js components
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x333333);
+  constructor() {
+    // Initialize Three.js components
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x333333);
 
-        // Use orthographic camera for 2D rendering
-        const renderArea = document.getElementById('render-area');
-        if (!renderArea) return;
-        
-        const width = renderArea.clientWidth;
-        const height = renderArea.clientHeight;
-        const aspect = width / height;
-        const frustumSize = 10;
-        
-        this.camera = new THREE.OrthographicCamera(
-            frustumSize * aspect / -2,
-            frustumSize * aspect / 2,
-            frustumSize / 2,
-            frustumSize / -2,
-            0.1,
-            1000
-        );
-        this.camera.position.z = 5;
+    // Use orthographic camera for 2D rendering
+    const renderArea = document.getElementById('render-area');
+    if (!renderArea) return;
 
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(width, height);
-        renderArea.appendChild(this.renderer.domElement);
+    const width = renderArea.clientWidth;
+    const height = renderArea.clientHeight;
+    const aspect = width / height;
+    const frustumSize = 10;
 
-        // Add orbit controls
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.05;
-        this.controls.screenSpacePanning = true;
-        this.controls.minDistance = 1;
-        this.controls.maxDistance = 50;
-        this.controls.maxPolarAngle = Math.PI / 2;
+    this.camera = new THREE.OrthographicCamera(
+      (frustumSize * aspect) / -2,
+      (frustumSize * aspect) / 2,
+      frustumSize / 2,
+      frustumSize / -2,
+      0.1,
+      1000
+    );
+    this.camera.position.z = 5;
 
-        // Initialize managers and loader
-        this.fontManager = FontManager.instance;
-        this.styleManager = new StyleManager();
-        this.fontLoader = new DefaultFontLoader();
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setSize(width, height);
+    renderArea.appendChild(this.renderer.domElement);
 
-        // Get DOM elements
-        this.mtextInput = document.getElementById('mtext-input') as HTMLTextAreaElement;
-        this.validateBtn = document.getElementById('validate-btn') as HTMLButtonElement;
-        this.renderBtn = document.getElementById('render-btn') as HTMLButtonElement;
-        this.statusDiv = document.getElementById('status') as HTMLDivElement;
-        this.fontSelect = document.getElementById('font-select') as HTMLSelectElement;
-        this.showBoundingBoxCheckbox = document.getElementById('show-bounding-box') as HTMLInputElement;
+    // Add orbit controls
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.05;
+    this.controls.screenSpacePanning = true;
+    this.controls.minDistance = 1;
+    this.controls.maxDistance = 50;
+    this.controls.maxPolarAngle = Math.PI / 2;
 
-        // Add lights
-        this.setupLights();
+    // Initialize managers and loader
+    this.fontManager = FontManager.instance;
+    this.styleManager = new StyleManager();
+    this.fontLoader = new DefaultFontLoader();
 
-        // Setup event listeners
-        this.setupEventListeners();
+    // Get DOM elements
+    this.mtextInput = document.getElementById('mtext-input') as HTMLTextAreaElement;
+    this.validateBtn = document.getElementById('validate-btn') as HTMLButtonElement;
+    this.renderBtn = document.getElementById('render-btn') as HTMLButtonElement;
+    this.statusDiv = document.getElementById('status') as HTMLDivElement;
+    this.fontSelect = document.getElementById('font-select') as HTMLSelectElement;
+    this.showBoundingBoxCheckbox = document.getElementById('show-bounding-box') as HTMLInputElement;
 
-        // Initialize fonts and UI, then render
-        this.initializeFonts().then(() => {
-            // Initial render after fonts are loaded
-            this.renderMText(this.mtextInput.value);
-        });
+    // Add lights
+    this.setupLights();
 
-        // Start animation loop
-        this.animate();
-    }
+    // Setup event listeners
+    this.setupEventListeners();
 
-    private setupLights(): void {
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        this.scene.add(ambientLight);
+    // Initialize fonts and UI, then render
+    this.initializeFonts().then(() => {
+      // Initial render after fonts are loaded
+      this.renderMText(this.mtextInput.value);
+    });
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(1, 1, 1);
-        this.scene.add(directionalLight);
-    }
+    // Start animation loop
+    this.animate();
+  }
 
-    private setupEventListeners(): void {
-        // Window resize
-        window.addEventListener('resize', () => {
-            const renderArea = document.getElementById('render-area');
-            if (!renderArea) return;
-            
-            const width = renderArea.clientWidth;
-            const height = renderArea.clientHeight;
-            const aspect = width / height;
-            const frustumSize = 10;
-            
-            this.camera.left = frustumSize * aspect / -2;
-            this.camera.right = frustumSize * aspect / 2;
-            this.camera.top = frustumSize / 2;
-            this.camera.bottom = frustumSize / -2;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(width, height);
-        });
+  private setupLights(): void {
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    this.scene.add(ambientLight);
 
-        // Validate button
-        this.validateBtn.addEventListener('click', () => {
-            const content = this.mtextInput.value;
-            const isValid = this.validateMText(content);
-            this.statusDiv.textContent = isValid ? 'Valid MText content' : 'Invalid MText content';
-            this.statusDiv.style.color = isValid ? '#0f0' : '#f00';
-        });
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(1, 1, 1);
+    this.scene.add(directionalLight);
+  }
 
-        // Render button
-        this.renderBtn.addEventListener('click', () => {
-            const content = this.mtextInput.value;
-            if (this.validateMText(content)) {
-                this.renderMText(content);
-                this.statusDiv.textContent = 'MText rendered successfully';
-                this.statusDiv.style.color = '#0f0';
-            } else {
-                this.statusDiv.textContent = 'Cannot render invalid MText content';
-                this.statusDiv.style.color = '#f00';
-            }
-        });
+  private setupEventListeners(): void {
+    // Window resize
+    window.addEventListener('resize', () => {
+      const renderArea = document.getElementById('render-area');
+      if (!renderArea) return;
 
-        // Font selection
-        this.fontSelect.addEventListener('change', () => {
-            const content = this.mtextInput.value;
-            if (this.validateMText(content)) {
-                this.renderMText(content);
-            }
-        });
+      const width = renderArea.clientWidth;
+      const height = renderArea.clientHeight;
+      const aspect = width / height;
+      const frustumSize = 10;
 
-        // Bounding box toggle
-        this.showBoundingBoxCheckbox.addEventListener('change', () => {
-            if (this.mtextBox) {
-                if (this.showBoundingBoxCheckbox.checked) {
-                    // If checkbox is checked and we have MText, create and show the box
-                    if (this.currentMText && this.currentMText.box && !this.currentMText.box.isEmpty()) {
-                        const box = this.createMTextBox(this.currentMText.box);
-                        this.scene.add(box);
-                    }
-                } else {
-                    // If checkbox is unchecked, remove the box from scene
-                    this.scene.remove(this.mtextBox);
-                    this.mtextBox = null;
-                }
-            }
-        });
-    }
+      this.camera.left = (frustumSize * aspect) / -2;
+      this.camera.right = (frustumSize * aspect) / 2;
+      this.camera.top = frustumSize / 2;
+      this.camera.bottom = frustumSize / -2;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(width, height);
+    });
 
-    private async initializeFonts(): Promise<void> {
-        try {
-            // Load available fonts for the dropdown
-            const fonts = await this.fontLoader.getAvaiableFonts();
+    // Validate button
+    this.validateBtn.addEventListener('click', () => {
+      const content = this.mtextInput.value;
+      const isValid = this.validateMText(content);
+      this.statusDiv.textContent = isValid ? 'Valid MText content' : 'Invalid MText content';
+      this.statusDiv.style.color = isValid ? '#0f0' : '#f00';
+    });
 
-            // Load default fonts
-            await this.fontLoader.load([this.fontManager.defaultFont]);
-            
-            // Clear existing options
-            this.fontSelect.innerHTML = '';
-            
-            // Add all available fonts to dropdown
-            fonts.forEach(font => {
-                const option = document.createElement('option');
-                option.value = font.name[0];
-                option.textContent = font.name[0]; // Use the first name from the array
-                // Set selected if this is the default font
-                if (font.name[0] === this.fontManager.defaultFont) {
-                    option.selected = true;
-                }
-                this.fontSelect.appendChild(option);
-            });
+    // Render button
+    this.renderBtn.addEventListener('click', () => {
+      const content = this.mtextInput.value;
+      if (this.validateMText(content)) {
+        this.renderMText(content);
+        this.statusDiv.textContent = 'MText rendered successfully';
+        this.statusDiv.style.color = '#0f0';
+      } else {
+        this.statusDiv.textContent = 'Cannot render invalid MText content';
+        this.statusDiv.style.color = '#f00';
+      }
+    });
 
-            this.statusDiv.textContent = 'Fonts loaded successfully';
-            this.statusDiv.style.color = '#0f0';
-        } catch (error) {
-            console.error('Error loading fonts:', error);
-            this.statusDiv.textContent = 'Error loading fonts';
-            this.statusDiv.style.color = '#f00';
-            throw error; // Re-throw to handle in the constructor
+    // Font selection
+    this.fontSelect.addEventListener('change', async () => {
+      const content = this.mtextInput.value;
+      const selectedFont = this.fontSelect.value;
+
+      try {
+        // Show loading status
+        this.statusDiv.textContent = `Loading font ${selectedFont}...`;
+        this.statusDiv.style.color = '#ffa500'; // Orange color for loading state
+
+        // Load the selected font
+        await this.fontLoader.load([selectedFont]);
+
+        // Re-render MText with new font
+        this.renderMText(content);
+
+        // Update status to indicate font change
+        this.statusDiv.textContent = `Font changed to ${selectedFont}`;
+        this.statusDiv.style.color = '#0f0';
+      } catch (error) {
+        console.error('Error loading font:', error);
+        this.statusDiv.textContent = `Error loading font ${selectedFont}`;
+        this.statusDiv.style.color = '#f00';
+      }
+    });
+
+    // Bounding box toggle
+    this.showBoundingBoxCheckbox.addEventListener('change', () => {
+      if (this.mtextBox) {
+        this.mtextBox.visible = this.showBoundingBoxCheckbox.checked;
+      }
+    });
+  }
+
+  private async initializeFonts(): Promise<void> {
+    try {
+      // Load available fonts for the dropdown
+      const fonts = await this.fontLoader.getAvaiableFonts();
+
+      // Load default fonts
+      await this.fontLoader.load([this.fontManager.defaultFont]);
+
+      // Clear existing options
+      this.fontSelect.innerHTML = '';
+
+      // Add all available fonts to dropdown
+      fonts.forEach((font) => {
+        const option = document.createElement('option');
+        option.value = font.name[0];
+        option.textContent = font.name[0]; // Use the first name from the array
+        // Set selected if this is the default font
+        if (font.name[0] === this.fontManager.defaultFont) {
+          option.selected = true;
         }
+        this.fontSelect.appendChild(option);
+      });
+
+      this.statusDiv.textContent = 'Fonts loaded successfully';
+      this.statusDiv.style.color = '#0f0';
+    } catch (error) {
+      console.error('Error loading fonts:', error);
+      this.statusDiv.textContent = 'Error loading fonts';
+      this.statusDiv.style.color = '#f00';
+      throw error; // Re-throw to handle in the constructor
+    }
+  }
+
+  private validateMText(content: string): boolean {
+    try {
+      const context = new MTextContext();
+      const parser = new MTextParser(content, context, true);
+      parser.parse();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  private createMTextBox(box: THREE.Box3): THREE.LineSegments {
+    // Remove existing box if any
+    if (this.mtextBox) {
+      this.scene.remove(this.mtextBox);
     }
 
-    private validateMText(content: string): boolean {
-        try {
-            const context = new MTextContext();
-            const parser = new MTextParser(content, context, true);
-            parser.parse();
-            return true;
-        } catch (error) {
-            return false;
-        }
+    // Create box geometry
+    const geometry = new THREE.BufferGeometry();
+    const min = box.min;
+    const max = box.max;
+    const vertices = new Float32Array([
+      min.x,
+      min.y,
+      0, // bottom left
+      max.x,
+      min.y,
+      0, // bottom right
+      max.x,
+      max.y,
+      0, // top right
+      min.x,
+      max.y,
+      0, // top left
+      min.x,
+      min.y,
+      0, // back to bottom left
+    ]);
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+    // Create line material
+    const material = new THREE.LineBasicMaterial({
+      color: 0x00ff00,
+      linewidth: 1,
+    });
+
+    // Create line segments
+    this.mtextBox = new THREE.LineSegments(geometry, material);
+    return this.mtextBox;
+  }
+
+  private renderMText(content: string): void {
+    // Remove existing MText if any
+    if (this.currentMText) {
+      this.scene.remove(this.currentMText);
     }
 
-    private createMTextBox(box: THREE.Box3): THREE.LineSegments {
-        // Remove existing box if any
-        if (this.mtextBox) {
-            this.scene.remove(this.mtextBox);
-        }
+    // Create new MText instance
+    const mtextContent = {
+      text: content,
+      height: 0.1,
+      width: 0,
+      position: new THREE.Vector3(0, 0, 0),
+    };
 
-        // Create box geometry
-        const geometry = new THREE.BufferGeometry();
-        const min = box.min;
-        const max = box.max;
-        const vertices = new Float32Array([
-            min.x, min.y, 0,  // bottom left
-            max.x, min.y, 0,  // bottom right
-            max.x, max.y, 0,  // top right
-            min.x, max.y, 0,  // top left
-            min.x, min.y, 0   // back to bottom left
-        ]);
-        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    this.currentMText = new MText(
+      mtextContent,
+      {
+        name: 'Standard',
+        standardFlag: 0,
+        fixedTextHeight: 0.1,
+        widthFactor: 1,
+        obliqueAngle: 0,
+        textGenerationFlag: 0,
+        lastHeight: 0.1,
+        font: this.fontSelect.value,
+        bigFont: '',
+        color: 0xffffff,
+      },
+      this.styleManager,
+      this.fontManager
+    );
 
-        // Create line material
-        const material = new THREE.LineBasicMaterial({ 
-            color: 0x00ff00,
-            linewidth: 1
-        });
+    this.scene.add(this.currentMText);
 
-        // Create line segments
-        this.mtextBox = new THREE.LineSegments(geometry, material);
-        return this.mtextBox;
+    // Create box around MText using its bounding box only if checkbox is checked
+    if (
+      this.showBoundingBoxCheckbox.checked &&
+      this.currentMText.box &&
+      !this.currentMText.box.isEmpty()
+    ) {
+      const box = this.createMTextBox(this.currentMText.box);
+      this.scene.add(box);
     }
+  }
 
-    private renderMText(content: string): void {
-        // Remove existing MText if any
-        if (this.currentMText) {
-            this.scene.remove(this.currentMText);
-        }
-
-        // Create new MText instance
-        const mtextContent = {
-            text: content,
-            height: 0.1,
-            width: 0,
-            position: new THREE.Vector3(0, 0, 0)
-        };
-
-        this.currentMText = new MText(mtextContent, {
-            name: 'Standard',
-            standardFlag: 0,
-            fixedTextHeight: 0.1,
-            widthFactor: 1,
-            obliqueAngle: 0,
-            textGenerationFlag: 0,
-            lastHeight: 0.1,
-            font: this.fontSelect.value,
-            bigFont: '',
-            color: 0xffffff
-        }, this.styleManager, this.fontManager);
-
-        this.scene.add(this.currentMText);
-
-        // Create box around MText using its bounding box only if checkbox is checked
-        if (this.showBoundingBoxCheckbox.checked && this.currentMText.box && !this.currentMText.box.isEmpty()) {
-            const box = this.createMTextBox(this.currentMText.box);
-            this.scene.add(box);
-        }
-    }
-
-    private animate(): void {
-        requestAnimationFrame(() => this.animate());
-        this.controls.update();
-        this.renderer.render(this.scene, this.camera);
-    }
+  private animate(): void {
+    requestAnimationFrame(() => this.animate());
+    this.controls.update();
+    this.renderer.render(this.scene, this.camera);
+  }
 }
 
 // Create and start the example
-new MTextRendererExample(); 
+new MTextRendererExample();

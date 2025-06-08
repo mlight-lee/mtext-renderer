@@ -63,7 +63,6 @@ export class MTextLines extends BaseText {
   private _hOffset: number;
   private _vOffset: number;
   private _lineCount: number;
-  private _currentLineSectionGeometries: THREE.BufferGeometry[];
   private _currentLineObjects: THREE.Object3D[];
   private _currentHorizontalAlignment: MTextParagraphAlignment;
   private _currentWidthFactor: number;
@@ -94,7 +93,6 @@ export class MTextLines extends BaseText {
     this._hOffset = 0;
     this._vOffset = 0;
     this._lineCount = 1;
-    this._currentLineSectionGeometries = [];
     this._currentLineObjects = [];
     this._currentHorizontalAlignment = options.horizontalAlignment;
     this._currentFont = this.textStyle.font.toLowerCase();
@@ -237,14 +235,6 @@ export class MTextLines extends BaseText {
   }
 
   /**
-   * One line may contain multiple sections. Different sections have differnt font, font size and color.
-   * This property contains the buffer geometries of the current section of the current line.
-   */
-  get currentLineSectionGeometries() {
-    return this._currentLineSectionGeometries;
-  }
-
-  /**
    * All of THREE.js objects in current line. It contains objects in all of sections of this line.
    */
   get currentLineObjects() {
@@ -349,7 +339,8 @@ export class MTextLines extends BaseText {
 
     for (const token of tokens) {
       if (token.type === TokenType.NEW_PARAGRAPH) {
-        this.startNewLine(geometries);
+        this.startNewLine();
+        this.processGeometries(geometries, group);
       } else if (token.type === TokenType.WORD) {
         const words = token.data;
         if (Array.isArray(words)) {
@@ -373,14 +364,11 @@ export class MTextLines extends BaseText {
   }
 
   private processGeometries(geometries: THREE.BufferGeometry[], group: THREE.Group) {
-    if (this.currentLineSectionGeometries.length > 0) {
-      geometries.push(...this.currentLineSectionGeometries);
-      this._currentLineSectionGeometries = [];
+    if (geometries.length > 0) {
+      const object = this.toThreeObject(geometries);
+      group.add(object);
+      geometries.length = 0;
     }
-
-    const object = this.toThreeObject(geometries);
-    group.add(object);
-    geometries.length = 0;
   }
 
   private processWord(word: string, geometries: THREE.BufferGeometry[]) {
@@ -404,7 +392,7 @@ export class MTextLines extends BaseText {
     geometry.scale(this.currentWidthFactor, 1, 1);
 
     if (this.hOffset > (this.maxWidth || Infinity)) {
-      this.startNewLine(geometries);
+      this.startNewLine();
     }
 
     if (this.flowDirection == MTextFlowDirection.BOTTOM_TO_TOP) {
@@ -423,7 +411,7 @@ export class MTextLines extends BaseText {
     } else {
       this._hOffset += shape.width * this.currentWordSpace * this.currentWidthFactor;
     }
-    this.currentLineSectionGeometries.push(geometry);
+    geometries.push(geometry);
   }
 
   processLastLine() {
@@ -484,7 +472,7 @@ export class MTextLines extends BaseText {
     return shape;
   }
 
-  private startNewLine(geometries: THREE.BufferGeometry[]) {
+  private startNewLine() {
     this._hOffset = 0;
     if (this.flowDirection == MTextFlowDirection.BOTTOM_TO_TOP) {
       this._vOffset += this.currentLineHeight;
@@ -494,12 +482,7 @@ export class MTextLines extends BaseText {
 
     this._lineCount++;
 
-    if (this.currentLineSectionGeometries.length > 0) {
-      geometries.push(...this.currentLineSectionGeometries);
-    }
     this.processAlignment();
-
-    this._currentLineSectionGeometries = [];
     this._currentLineObjects = [];
 
     if (this._lineCount == 2) {

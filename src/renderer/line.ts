@@ -345,6 +345,7 @@ export class MTextLines extends BaseText {
    */
   processText(tokens: Generator<MTextToken>) {
     const geometries: THREE.BufferGeometry[] = [];
+    const group: THREE.Group = new THREE.Group();
 
     for (const token of tokens) {
       if (token.type === TokenType.NEW_PARAGRAPH) {
@@ -356,31 +357,46 @@ export class MTextLines extends BaseText {
         } else if (typeof words === 'string' && words.length > 0) {
           this.processWord(words, geometries);
         }
+        this.processGeometries(geometries, group);
+      } else if (token.type === TokenType.SPACE) {
+        this.processBlank();
       } else if (token.type === TokenType.PROPERTIES_CHANGED) {
         this.processFormat(token.data as ChangedProperties);
+        this.processGeometries(geometries, group);
       }
     }
 
+    if (geometries.length > 0) {
+      this.processGeometries(geometries, group);
+    }
+    return group;
+  }
+
+  private processGeometries(geometries: THREE.BufferGeometry[], group: THREE.Group) {
     if (this.currentLineSectionGeometries.length > 0) {
       geometries.push(...this.currentLineSectionGeometries);
       this._currentLineSectionGeometries = [];
     }
 
     const object = this.toThreeObject(geometries);
-    this._currentLineObjects.push(object);
-    return object;
+    group.add(object);
+    geometries.length = 0;
   }
 
-  processWord(word: string, geometries: THREE.BufferGeometry[]) {
+  private processWord(word: string, geometries: THREE.BufferGeometry[]) {
     for (let i = 0; i < word.length; i++) {
       this.processChar(word[i], geometries);
     }
   }
 
-  processChar(char: string, geometries: THREE.BufferGeometry[]): void {
+  private processBlank() {
+    this._hOffset += this.currentFontSize * this.currentWordSpace * this.currentWidthFactor;
+  }
+
+  private processChar(char: string, geometries: THREE.BufferGeometry[]): void {
     const shape = this.getCharShape(char);
     if (!shape) {
-      this._hOffset += this.currentFontSize * this.currentWordSpace * this.currentWidthFactor;
+      this.processBlank();
       return;
     }
 

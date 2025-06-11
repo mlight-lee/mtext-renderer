@@ -23,6 +23,17 @@ class MTextRendererExample {
   private fontSelect: HTMLSelectElement;
   private showBoundingBoxCheckbox: HTMLInputElement;
 
+  // Example texts
+  private readonly exampleTexts = {
+    basic: '{\\C1;Hello World}\\P{\\C2;This is a test}\\P{\\C3;MText Renderer}',
+    colors:
+      '{\\C1;Red Text}\\P{\\C2;Green Text}\\P{\\C3;Blue Text}\\P{\\C4;Yellow Text}\\P{\\C5;Magenta Text}\\P{\\C6;Cyan Text}\\P{\\C7;White Text}',
+    formatting:
+      '{\\C1;\\W2;Bold Text}\\P{\\C2;\\W0.5;Thin Text}\\P{\\C3;\\O30;Oblique Text}\\P{\\C4;\\Q1;Wide Text}\\P{\\C5;\\Q0.5;Narrow Text}',
+    complex:
+      '{\\C1;\\W2;Title}\\P{\\C2;This is a paragraph with different styles.}\\P{\\C3;\\W1.5;Subtitle}\\P{\\C4;• First item\\P• Second item\\P• Third item}\\P{\\C5;\\W0.8;Footer text}',
+  };
+
   constructor() {
     // Initialize Three.js components
     this.scene = new THREE.Scene();
@@ -35,7 +46,7 @@ class MTextRendererExample {
     const width = renderArea.clientWidth;
     const height = renderArea.clientHeight;
     const aspect = width / height;
-    const frustumSize = 10;
+    const frustumSize = 5;
 
     this.camera = new THREE.OrthographicCamera(
       (frustumSize * aspect) / -2,
@@ -112,7 +123,7 @@ class MTextRendererExample {
       const width = renderArea.clientWidth;
       const height = renderArea.clientHeight;
       const aspect = width / height;
-      const frustumSize = 10;
+      const frustumSize = 5;
 
       this.camera.left = (frustumSize * aspect) / -2;
       this.camera.right = (frustumSize * aspect) / 2;
@@ -138,7 +149,7 @@ class MTextRendererExample {
       try {
         // Show loading status
         this.statusDiv.textContent = `Loading font ${selectedFont}...`;
-        this.statusDiv.style.color = '#ffa500'; // Orange color for loading state
+        this.statusDiv.style.color = '#ffa500';
 
         // Load the selected font
         await this.fontLoader.load([selectedFont]);
@@ -146,7 +157,7 @@ class MTextRendererExample {
         // Re-render MText with new font
         this.renderMText(content);
 
-        // Update status to indicate font change
+        // Update status
         this.statusDiv.textContent = `Font changed to ${selectedFont}`;
         this.statusDiv.style.color = '#0f0';
       } catch (error) {
@@ -154,6 +165,19 @@ class MTextRendererExample {
         this.statusDiv.textContent = `Error loading font ${selectedFont}`;
         this.statusDiv.style.color = '#f00';
       }
+    });
+
+    // Example buttons
+    document.querySelectorAll('.example-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        const exampleType = (button as HTMLElement).dataset.example;
+        if (exampleType && this.exampleTexts[exampleType as keyof typeof this.exampleTexts]) {
+          this.mtextInput.value = this.exampleTexts[exampleType as keyof typeof this.exampleTexts];
+          this.renderMText(this.mtextInput.value);
+          this.statusDiv.textContent = 'Example loaded';
+          this.statusDiv.style.color = '#0f0';
+        }
+      });
     });
 
     // Bounding box toggle
@@ -248,7 +272,7 @@ class MTextRendererExample {
       text: content,
       height: 0.1,
       width: 0,
-      position: new THREE.Vector3(0, 0, 0),
+      position: new THREE.Vector3(-3, 2, 0),
     };
 
     this.currentMText = new MText(

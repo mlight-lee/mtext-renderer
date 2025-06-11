@@ -9,6 +9,11 @@
             margin: 0; 
             padding: 20px;
             font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background: #f0f0f0;
         }
         #controls {
             width: 800px;
@@ -18,6 +23,7 @@
             box-sizing: border-box;
             border-radius: 5px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         #render-area {
             width: 800px;
@@ -26,6 +32,8 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background: white;
         }
         canvas { 
             display: block;
@@ -69,6 +77,21 @@
         .checkbox-container input[type="checkbox"] {
             margin-right: 8px;
         }
+        .examples {
+            margin: 10px 0;
+        }
+        .example-btn {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .example-btn:hover {
+            background: #555;
+        }
     </style>
 </head>
 <body>
@@ -84,6 +107,13 @@
         <div class="checkbox-container">
             <input type="checkbox" id="show-bounding-box" checked>
             <label for="show-bounding-box">Show Bounding Box</label>
+        </div>
+        <div class="examples">
+            <h3>Example Texts:</h3>
+            <button class="example-btn" data-example="basic">Basic Example</button>
+            <button class="example-btn" data-example="colors">Color Example</button>
+            <button class="example-btn" data-example="formatting">Formatting Example</button>
+            <button class="example-btn" data-example="complex">Complex Example</button>
         </div>
         <div id="status"></div>
     </div>

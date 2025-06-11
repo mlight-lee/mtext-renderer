@@ -10,7 +10,8 @@ import { ShxTextShape } from './shxTextShape';
 export class ShxFont extends BaseFont {
   /** Internal shx font instance */
   private readonly font: ShxFontInternal;
-  public data: ShxFontData;
+  public readonly type = 'shx';
+  public readonly data: ShxFontData;
 
   constructor(data: ShxFontData | ArrayBuffer) {
     super();

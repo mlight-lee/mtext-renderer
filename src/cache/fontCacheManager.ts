@@ -38,7 +38,7 @@ export class FontCacheManager {
    */
   public async set(fileName: string, fontData: FontData): Promise<void> {
     const db = await this.getDatabase();
-    await db.put(DB_STORES.fonts, { ...fontData, fileName });
+    await db.put(DB_STORES.fonts, { ...fontData, name: fileName });
   }
 
   /**

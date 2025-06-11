@@ -1,11 +1,17 @@
 import { BaseTextShape } from './baseTextShape';
+import { FontType } from './font';
 
 /**
  * Abstract base class for font implementations.
  * Provides common functionality and interface for font handling.
  */
 export abstract class BaseFont {
-  public data: unknown;
+  /** Font type */
+  public abstract readonly type: FontType;
+  /**
+   * Parsed font data. Different types of fonts have different data structure.
+   */
+  public abstract readonly data: unknown;
   /**
    * Record of characters that are not supported by this font.
    * Maps character strings to their occurrence count.

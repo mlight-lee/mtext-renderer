@@ -14,7 +14,8 @@ export class MeshFont extends BaseFont {
    * Three.js font
    */
   public readonly font: Font;
-  public data: MeshFontData;
+  public readonly type = 'mesh';
+  public readonly data: MeshFontData;
 
   /**
    * Creates a new instance of MeshFont.

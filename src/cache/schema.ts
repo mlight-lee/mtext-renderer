@@ -27,7 +27,7 @@ export const dbSchema = [
     stores: [
       {
         name: DB_STORES.fonts,
-        keyPath: 'fileName',
+        keyPath: 'name',
       },
     ],
   },

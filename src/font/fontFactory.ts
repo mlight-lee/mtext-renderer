@@ -43,9 +43,9 @@ export class FontFactory {
    * @throws {Error} If the font data type is not supported
    */
   public createFont(data: FontData): BaseFont {
-    if (this.isShxFontData(data)) {
+    if (data.type === 'shx') {
       return new ShxFont(data.data as ShxFontData);
-    } else if (this.isMeshFontData(data)) {
+    } else if (data.type === 'mesh') {
       return new MeshFont(data.data as MeshFontData);
     }
     throw new Error('Unsupported font data type');
@@ -70,27 +70,5 @@ export class FontFactory {
     }
 
     throw new Error(`Unsupported font file type: ${extension}`);
-  }
-
-  /**
-   * Determines if the provided font data is for a ShxFont.
-   * Checks for the presence of the fontType property.
-   *
-   * @param data - The font data to check
-   * @returns True if the data is for a ShxFont, false otherwise
-   */
-  private isShxFontData(data: FontData) {
-    return 'fontType' in data.data;
-  }
-
-  /**
-   * Determines if the provided font data is for a MeshFont.
-   * Checks for the absence of the fontType property.
-   *
-   * @param data - The font data to check
-   * @returns True if the data is for a MeshFont, false otherwise
-   */
-  private isMeshFontData(data: FontData) {
-    return !('fontType' in data.data);
   }
 }

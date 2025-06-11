@@ -4,7 +4,6 @@ import { BaseFont } from './baseFont';
 import { BaseTextShape } from './baseTextShape';
 import { FontCacheManager } from '../cache';
 import { EventManager, getFileName, getFileNameWithoutExtension } from '../common';
-import { FontData } from './font';
 import { FontFactory } from './fontFactory';
 import { FontLoadStatus } from './fontLoader';
 
@@ -34,7 +33,7 @@ export class FontManager {
   protected fileNames: string[];
   public unsupportedChars: Record<string, number> = {};
   public missedFonts: Record<string, number> = {};
-  public enableFontCache = false;
+  public enableFontCache = true;
   /**
    * Default font. If the specified font can't be found, the default font will be used
    * when rendering texts.
@@ -185,7 +184,11 @@ export class FontManager {
       if (font) {
         this.fontMap.set(fontName, font);
         if (this.enableFontCache) {
-          await FontCacheManager.instance.set(fontName, font.data as FontData);
+          await FontCacheManager.instance.set(fontName, {
+            name: fontName,
+            type: font.type,
+            data: font.data,
+          });
         }
       }
     }
@@ -201,12 +204,12 @@ export class FontManager {
     }
     const fontFileDatas = await FontCacheManager.instance.getAll();
     for (const fontFileData of fontFileDatas) {
-      const { fileName } = fontFileData;
-      if (this.fileNames && !this.fileNames.includes(fileName)) {
+      const { name } = fontFileData;
+      if (this.fileNames && !this.fileNames.includes(name)) {
         continue;
       }
       const font = FontFactory.instance.createFont(fontFileData);
-      this.fontMap.set(fileName, font);
+      this.fontMap.set(name, font);
     }
   }
 

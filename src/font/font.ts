@@ -1,16 +1,13 @@
-import { ShxFontData } from '@mlightcad/shx-parser';
-import { MeshFontData } from './meshFont';
-
-export type FontDataType = ShxFontData | MeshFontData;
+export type FontType = 'shx' | 'mesh';
 
 /**
  * Represents font data stored in the cache database
  */
 export interface FontData {
-  /** The file name of the font */
-  fileName: string;
-  /** The order/priority of the font */
-  order: number;
-  /** Mapping of character codes to their bitmap data */
-  data: FontDataType;
+  /** Font name */
+  name: string;
+  /** Font type */
+  type: FontType;
+  /** Parsed font data. Different types of fonts have different data structure.  */
+  data: unknown;
 }

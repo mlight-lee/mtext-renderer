@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
 import { FontManager } from '../font';
-import { BaseText } from './baseText';
 import { MTextAttachmentPoint, MTextData, MTextFlowDirection, Point2d, TextStyle } from './types';
 
 import { StyleManager } from './styleManager';
@@ -21,7 +20,11 @@ const translateTempMatrix = /*@__PURE__*/ new THREE.Matrix4();
 const tempMatrix = /*@__PURE__*/ new THREE.Matrix4();
 const AxisX = /*@__PURE__*/ new THREE.Vector3(1, 0, 0);
 
-export class MText extends BaseText {
+export class MText extends THREE.Object3D {
+  protected _style: TextStyle;
+  protected _styleManager: StyleManager;
+  protected _fontManager: FontManager;
+  protected _box: THREE.Box3;
   private _boxes: THREE.Box3[];
 
   constructor(
@@ -30,7 +33,11 @@ export class MText extends BaseText {
     styleManager: StyleManager,
     fontManager: FontManager
   ) {
-    super(style, styleManager, fontManager);
+    super();
+    this._style = style;
+    this._styleManager = styleManager;
+    this._fontManager = fontManager;
+    this._box = new THREE.Box3();
     this._boxes = [];
     const obj = this.loadMText(text, style);
     if (obj) {
@@ -38,6 +45,30 @@ export class MText extends BaseText {
       this._boxes.forEach((box) => this.box.union(box));
       this.add(obj);
     }
+  }
+
+  get fontManager() {
+    return this._fontManager;
+  }
+
+  get styleManager() {
+    return this._styleManager;
+  }
+
+  get textStyle() {
+    return this._style;
+  }
+
+  /**
+   * The bounding box without considering transformation matrix applied on this object.
+   * If you want to get bounding box with transformation matrix, please call `applyMatrix4`
+   * for this box.
+   */
+  get box() {
+    return this._box;
+  }
+  set box(box: THREE.Box3) {
+    this._box.copy(box);
   }
 
   /**

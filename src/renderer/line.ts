@@ -8,7 +8,6 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import { FontManager } from '../font';
-import { BaseText } from './baseText';
 import { StyleManager } from './styleManager';
 import { MTextFlowDirection, TextStyle } from './types';
 import { getColorByIndex } from '../common';
@@ -57,7 +56,10 @@ export interface TextLineFormatOptions {
 /**
  * This class represents lines of texts.
  */
-export class MTextLines extends BaseText {
+export class MTextLines {
+  private _style: TextStyle;
+  private _styleManager: StyleManager;
+  private _fontManager: FontManager;
   private _options: TextLineFormatOptions;
   private _totalHeight: number;
   private _hOffset: number;
@@ -87,7 +89,9 @@ export class MTextLines extends BaseText {
     fontManager: FontManager,
     options: TextLineFormatOptions
   ) {
-    super(style, styleManager, fontManager);
+    this._style = style;
+    this._styleManager = styleManager;
+    this._fontManager = fontManager;
     this._options = options;
     this._totalHeight = 0;
     this._hOffset = 0;
@@ -102,6 +106,18 @@ export class MTextLines extends BaseText {
     this._currentFontSizeScaleFactor = 1;
     this._currentMaxFontSize = 0;
     this.initLineParams();
+  }
+
+  get fontManager() {
+    return this._fontManager;
+  }
+
+  get styleManager() {
+    return this._styleManager;
+  }
+
+  get textStyle() {
+    return this._style;
   }
 
   /**

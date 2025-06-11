@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 
 /**
- * The class represents the shape of one character.
+ * Abstract base class for text shape implementations.
+ * Provides common functionality and interface for text shape handling.
+ * This class defines the core interface that all text shape types must implement.
  */
 export abstract class BaseTextShape extends THREE.Shape {
-  /**
-   * The character of the shape
-   */
+  /** The character this shape represents */
   public readonly char: string;
   /**
    * Width used to render this character
@@ -14,16 +14,16 @@ export abstract class BaseTextShape extends THREE.Shape {
   public width = 0;
 
   /**
-   * Constructor
-   * @param char - The character of the shape
-   */
+   * Creates a new instance of BaseTextShape
+   * @param char - The character this shape represents   */
   constructor(char: string) {
     super();
     this.char = char;
   }
 
   /**
-   * Converts current text shape to THREE.BufferGeometry
+   * Converts the text shape to a THREE.js geometry
+   * @returns A THREE.js BufferGeometry representing the text shape
    */
   abstract toGeometry(): THREE.BufferGeometry;
 }

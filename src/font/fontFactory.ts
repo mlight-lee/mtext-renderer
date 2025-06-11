@@ -9,6 +9,7 @@ import { ShxFont } from './shxFont';
 /**
  * A singleton factory class for creating font instances.
  * This factory can create both ShxFont and MeshFont instances based on the provided font data.
+ * It handles the creation of appropriate font objects based on the font type and data format.
  *
  * @example
  * ```typescript
@@ -22,10 +23,8 @@ export class FontFactory {
   private constructor() {}
 
   /**
-   * Gets the singleton instance of the FontFactory.
-   * If no instance exists, creates a new one.
-   *
-   * @returns The singleton instance of FontFactory
+   * Gets the singleton instance of the FontFactory
+   * @returns The FontFactory instance
    */
   public static get instance(): FontFactory {
     if (!FontFactory._instance) {
@@ -36,7 +35,7 @@ export class FontFactory {
 
   /**
    * Creates a font instance based on the provided font data.
-   * The type of font created (ShxFont or MeshFont) is determined by the presence of the fontType property.
+   * The type of font created (ShxFont or MeshFont) is determined by the font type.
    *
    * @param data - The font data to create the font instance from
    * @returns A new instance of either ShxFont or MeshFont

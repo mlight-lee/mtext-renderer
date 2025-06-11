@@ -3,9 +3,20 @@ import * as THREE from 'three';
 
 import { BaseTextShape } from './baseTextShape';
 
+/**
+ * Represents a text shape for SHX fonts.
+ * This class extends BaseTextShape to provide specific functionality for SHX fonts,
+ * including shape data management and dimension calculations.
+ */
 export class ShxTextShape extends BaseTextShape {
+  /** The shape data for this character */
   private readonly shape: ShxShape;
 
+  /**
+   * Creates a new instance of ShxTextShape
+   * @param char - The character this shape represents
+   * @param shape - The shape data for this character
+   */
   constructor(char: string, shape: ShxShape) {
     super(char);
     this.shape = shape;
@@ -22,7 +33,8 @@ export class ShxTextShape extends BaseTextShape {
   }
 
   /**
-   * Converts current text shape to THREE.BufferGeometry
+   * Converts the text shape to a THREE.js geometry
+   * @returns A THREE.js BufferGeometry representing the text shape
    */
   toGeometry() {
     const polylines = this.shape.polylines;

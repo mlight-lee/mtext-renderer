@@ -1,6 +1,5 @@
 /**
  * Represents information about a font in the system
- * @interface FontInfo
  */
 export interface FontInfo {
   /** Array of font names/aliases */
@@ -15,7 +14,6 @@ export interface FontInfo {
 
 /**
  * Represents the status of a font loading operation
- * @interface FontLoadStatus
  */
 export interface FontLoadStatus {
   /** Name of the font that was loaded */
@@ -27,9 +25,10 @@ export interface FontLoadStatus {
 }
 
 /**
- * Interface that defines font loading functionality
- * Applications should implement this interface to provide font loading capabilities
- * @interface FontLoader
+ * Interface that defines font loading functionality.
+ * Applications should implement this interface to provide font loading capabilities.
+ * This interface abstracts the font loading process, allowing different implementations
+ * for different font sources or loading strategies.
  */
 export interface FontLoader {
   /**

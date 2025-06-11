@@ -1,22 +1,35 @@
 import { FontManager } from './fontManager';
 import { FontInfo, FontLoader } from './fontLoader';
 
+/**
+ * Default implementation of the FontLoader interface.
+ * This class provides font loading functionality using a CDN-based font repository.
+ * It loads font metadata from a JSON file and provides access to available fonts.
+ */
 export class DefaultFontLoader implements FontLoader {
+  /** List of available fonts in the system */
   private _avaiableFonts: FontInfo[];
 
+  /**
+   * Creates a new instance of DefaultFontLoader
+   */
   constructor() {
     this._avaiableFonts = [];
   }
 
   /**
-   * Avaiable fonts to load.
+   * Gets the list of available fonts
+   * @returns Array of FontInfo objects describing available fonts
    */
   get avaiableFonts() {
     return this._avaiableFonts;
   }
 
   /**
-   * @inheritdoc
+   * Retrieves information about all available fonts in the system.
+   * Loads font metadata from a CDN if not already loaded.
+   * @returns Promise that resolves to an array of FontInfo objects
+   * @throws {Error} If font metadata cannot be loaded from the CDN
    */
   async getAvaiableFonts() {
     if (this._avaiableFonts.length == 0) {
@@ -37,7 +50,10 @@ export class DefaultFontLoader implements FontLoader {
   }
 
   /**
-   * @inheritdoc
+   * Loads the specified fonts into the system.
+   * If no font names are provided, loads all available fonts.
+   * @param fontNames - Array of font names to load
+   * @returns Promise that resolves to an array of FontLoadStatus objects
    */
   async load(fontNames: string[]) {
     if (fontNames.length == 0) {

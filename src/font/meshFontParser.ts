@@ -1,6 +1,14 @@
 import { parse } from 'opentype.js';
 import { MeshFontData } from './meshFont';
 
+/**
+ * Parses a mesh font from raw binary data.
+ * This function converts raw font data (e.g., TTF, OTF, WOFF) into a MeshFontData object
+ * that can be used by the MeshFont class.
+ *
+ * @param data - The raw font data as an ArrayBuffer
+ * @returns A MeshFontData object containing the parsed font information
+ */
 export function parseMeshFont(data: ArrayBuffer) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const convert = (font: any, reversed: boolean): MeshFontData => {
@@ -68,6 +76,13 @@ export function parseMeshFont(data: ArrayBuffer) {
     };
   };
 
+  /**
+   * Reverses the order of path commands in a font glyph.
+   * This is used when the font needs to be rendered in reverse order.
+   *
+   * @param commands - Array of path commands to reverse
+   * @returns Array of reversed path commands
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reverseCommands = (commands: any[]) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

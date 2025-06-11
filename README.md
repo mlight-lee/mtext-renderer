@@ -10,36 +10,180 @@ A flexible and extensible AutoCAD MText renderer implementation using Three.js. 
 
 ## Core Components
 
-### 1. FontManager
+### FontManager
 
-Singleton class managing font resources:
+The central manager for font operations. It's a singleton class that handles font loading, caching, and text rendering.
 
-```typescript
-class FontManager {
-    static instance: FontManager;
-    defaultFont: string;
-}
-```
+**Public Properties:**
+- `unsupportedChars`: Record of characters not supported by any loaded font
+- `missedFonts`: Record of fonts that were requested but not found
+- `enableFontCache`: Flag to enable/disable font caching. If it is true, parsed fonts 
+will be stored in local IndexedDB to improve performance. Default value is true.
+- `defaultFont`: Default font to use when a requested font is not found
+- `events`: Event managers for font-related events
+  - `fontNotFound`: Triggered when a font cannot be found
+  - `fontLoaded`: Triggered when a font is successfully loaded
 
-### 2. StyleManager
+**Public Methods:**
+- `loadFonts(urls)`: Loads fonts from URLs
+- `getCharShape(char, fontName, size)`: Gets text shape for a character
+- `getFontScaleFactor(fontName)`: Gets scale factor for a font
+- `getNotFoundTextShape(size)`: Gets shape for not found indicator
+- `getUnsupportedChar()`: Gets record of unsupported characters
+- `release()`: Releases all loaded fonts
 
-Manages text styling and formatting:
+### FontLoader
 
-```typescript
-class StyleManager {
-    constructor();
-}
-```
+Interface for font loading operations. The default implementation [DefaultFontLoader](./src/font/defaultFontLoader.ts) uses a CDN-based font repository.
 
-### 3. DefaultFontLoader
+**Public Methods:**
+- `load(fontNames)`: Loads specified fonts into the system
+- `getAvaiableFonts()`: Retrieves information about available fonts
 
-Handles font loading and management:
+### BaseFont
 
-```typescript
-class DefaultFontLoader {
-    load(fonts: string[]): Promise<void>;
-    getAvaiableFonts(): Promise<Font[]>;
-}
+Abstract base class for font implementations. Provides common functionality for font handling.
+
+**Public Properties:**
+- `type`: Type of font ('shx' or 'mesh')
+- `data`: Parsed font data
+- `unsupportedChars`: Record of unsupported characters
+
+**Public Methods:**
+- `getCharShape(char, size)`: Gets shape for a character
+- `getScaleFactor()`: Gets font scale factor
+- `getNotFoundTextShape(size)`: Gets shape for not found indicator
+
+### BaseTextShape
+
+Abstract base class for text shape implementations. Provides common functionality for text shape handling.
+
+**Public Properties:**
+- `char`: Character this shape represents
+- `size`: Size of the text shape
+
+**Public Methods:**
+- `getWidth()`: Gets width of text shape
+- `getHeight()`: Gets height of text shape
+- `toGeometry()`: Converts shape to THREE.BufferGeometry
+
+### FontFactory
+
+Singleton factory class for creating font instances. Handles creation of appropriate font objects based on type and data format.
+
+**Public Methods:**
+- `createFont(data)`: Creates font from font data
+- `createFontFromBuffer(fileName, buffer)`: Creates font from file data
+
+### FontCacheManager
+Manages font data caching using IndexedDB. Provides persistent storage for font data.
+
+**Public Methods:**
+- `get(fileName)`: Retrieves font data from cache
+- `set(fileName, fontData)`: Stores font data in cache
+- `getAll()`: Retrieves all cached font data
+- `clear()`: Clears all cached font data
+
+### MText
+Main class for rendering AutoCAD MText content. Extends THREE.Object3D to integrate with Three.js scene graph.
+
+**Public Properties:**
+- `content`: MText content configuration including text, height, width, and position
+- `style`: Text style configuration including font, color, and text generation flags
+- `fontManager`: Reference to FontManager instance for font operations
+- `styleManager`: Reference to StyleManager instance for style operations
+
+**Public Methods:**
+- `update()`: Updates the text rendering based on current content and style
+- `setContent(content)`: Updates the text content
+- `setStyle(style)`: Updates the text style
+- `dispose()`: Cleans up resources when the MText instance is no longer needed
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class MText {
+        +content: MTextContent
+        +style: MTextStyle
+        +fontManager: FontManager
+        +styleManager: StyleManager
+        +update()
+        +setContent(content)
+        +setStyle(style)
+        +dispose()
+    }
+
+    class FontManager {
+        -_instance: FontManager
+        +unsupportedChars: Record
+        +missedFonts: Record
+        +enableFontCache: boolean
+        +defaultFont: string
+        +events: EventManagers
+        +loadFonts(urls)
+        +getCharShape(char, fontName, size)
+        +getFontScaleFactor(fontName)
+        +getNotFoundTextShape(size)
+        +getUnsupportedChar()
+        +release()
+    }
+
+    class FontLoader {
+        <<interface>>
+        +load(fontNames)
+        +getAvaiableFonts()
+    }
+
+    class DefaultFontLoader {
+        -_avaiableFonts: FontInfo[]
+        +load(fontNames)
+        +getAvaiableFonts()
+    }
+
+    class BaseFont {
+        <<abstract>>
+        +type: FontType
+        +data: unknown
+        +unsupportedChars: Record
+        +getCharShape(char, size)
+        +getScaleFactor()
+        +getNotFoundTextShape(size)
+    }
+
+    class BaseTextShape {
+        <<abstract>>
+        +char: string
+        +size: number
+        +getWidth()
+        +getHeight()
+        +toGeometry()
+    }
+
+    class FontFactory {
+        -_instance: FontFactory
+        +createFont(data)
+        +createFontFromBuffer(fileName, buffer)
+    }
+
+    class FontCacheManager {
+        -_instance: FontCacheManager
+        +get(fileName)
+        +set(fileName, fontData)
+        +getAll()
+        +clear()
+    }
+
+    MText --> FontManager
+    MText --> StyleManager
+    FontManager --> FontFactory
+    FontManager --> FontCacheManager
+    FontManager --> BaseFont
+    DefaultFontLoader ..|> FontLoader
+    BaseFont <|-- MeshFont
+    BaseFont <|-- ShxFont
+    BaseTextShape <|-- MeshTextShape
+    BaseTextShape <|-- ShxTextShape
 ```
 
 ## Usage

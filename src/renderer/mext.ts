@@ -20,13 +20,30 @@ const translateTempMatrix = /*@__PURE__*/ new THREE.Matrix4();
 const tempMatrix = /*@__PURE__*/ new THREE.Matrix4();
 const AxisX = /*@__PURE__*/ new THREE.Vector3(1, 0, 0);
 
+/**
+ * Represents an AutoCAD MText object in Three.js.
+ * This class extends THREE.Object3D to provide MText rendering capabilities,
+ * including text layout, alignment, and transformation.
+ */
 export class MText extends THREE.Object3D {
+  /** The text style configuration for this MText object */
   protected _style: TextStyle;
+  /** The style manager instance for handling text styles */
   protected _styleManager: StyleManager;
+  /** The font manager instance for handling font operations */
   protected _fontManager: FontManager;
+  /** The bounding box of the entire MText object */
   protected _box: THREE.Box3;
+  /** Array of bounding boxes for individual text elements */
   private _boxes: THREE.Box3[];
 
+  /**
+   * Creates a new instance of MText.
+   * @param text - The MText data containing text content and properties
+   * @param style - The text style configuration
+   * @param styleManager - The style manager instance
+   * @param fontManager - The font manager instance
+   */
   constructor(
     text: MTextData,
     style: TextStyle,
@@ -47,22 +64,34 @@ export class MText extends THREE.Object3D {
     }
   }
 
+  /**
+   * Gets the font manager instance associated with this MText object.
+   * @returns The FontManager instance
+   */
   get fontManager() {
     return this._fontManager;
   }
 
+  /**
+   * Gets the style manager instance associated with this MText object.
+   * @returns The StyleManager instance
+   */
   get styleManager() {
     return this._styleManager;
   }
 
+  /**
+   * Gets the text style configuration for this MText object.
+   * @returns The TextStyle configuration
+   */
   get textStyle() {
     return this._style;
   }
 
   /**
-   * The bounding box without considering transformation matrix applied on this object.
-   * If you want to get bounding box with transformation matrix, please call `applyMatrix4`
-   * for this box.
+   * Gets or sets the bounding box of this MText object.
+   * The bounding box is calculated without considering the transformation matrix.
+   * To get the bounding box with transformation, call `applyMatrix4` on this box.
    */
   get box() {
     return this._box;
@@ -72,15 +101,15 @@ export class MText extends THREE.Object3D {
   }
 
   /**
-   * Get intersections between a casted ray and this object. Override this method
-   * to calculate intersection using the bounding box of texts.
+   * Calculates intersections between a ray and this MText object.
+   * Overrides the base THREE.Object3D raycast method to use the text's bounding boxes.
+   * @param raycaster - The raycaster to use for intersection testing
+   * @param intersects - Array to store intersection results
    */
   raycast(raycaster: THREE.Raycaster, intersects: THREE.Intersection[]) {
     this._boxes.forEach((box) => {
-      // Check for intersection with the bounding box
       if (raycaster.ray.intersectBox(box, tempPoint)) {
         const distance = raycaster.ray.origin.distanceTo(tempPoint);
-        // Push intersection details
         intersects.push({
           distance: distance,
           point: tempPoint.clone(),
@@ -93,6 +122,12 @@ export class MText extends THREE.Object3D {
     });
   }
 
+  /**
+   * Loads and processes MText data to create a Three.js object.
+   * @param mtextData - The MText data to process
+   * @param style - The text style configuration
+   * @returns The created Three.js object, or undefined if creation fails
+   */
   private loadMText(mtextData: MTextData, style: TextStyle) {
     const { object, height } = this.createMTextGroup(mtextData, style);
     if (!object) {
@@ -103,7 +138,6 @@ export class MText extends THREE.Object3D {
     if (mtextData.position) {
       tempVector.x += mtextData.position.x;
       tempVector.y += mtextData.position.y;
-      // object.position.z += entity.position.z;
       object.matrix.compose(tempVector, tempQuaternion, tempScale);
     }
 
@@ -115,23 +149,6 @@ export class MText extends THREE.Object3D {
       mtextData.drawingDirection
     );
 
-    // const textAlign = content.style.horizontalAlignment;
-    // switch (textAlign) {
-    //     case "left":
-    //         anchorX = 0;
-    //         break;
-    //     case "center":
-    //         anchorX = 0;
-    //         anchorX -= width / 2;
-    //         break;
-    //     case "right":
-    //         anchorX = 0;
-    //         anchorX -= width;
-    //         break;
-    //     default:
-    //         break;
-    // }
-    // object.geometry.translate(anchorX, anchorY, 0);
     object.traverse((obj) => {
       if ('geometry' in obj) {
         const geometry = obj.geometry as THREE.BufferGeometry;
@@ -146,21 +163,8 @@ export class MText extends THREE.Object3D {
       const vec = new THREE.Vector3(dv.x, dv.y, dv.z);
       const v = vec.clone().cross(AxisX);
       const angle = AxisX.angleTo(vec);
-      //object.rotateZ(v.z > 0 ? -angle : angle);
       rotateAngle = v.z > 0 ? -angle : angle;
     }
-
-    // for offset
-    // if (content.lineLength > 1) {
-    //     object.position.y -= size.y + (content.style.textHeight as number);
-    // } else {
-    //     object.position.y -= size.y;
-    // }
-
-    // if (GeometryUtils.shouldRebasePositionOnRTC(tempVector2)) {
-    //   // The translation part of the matrix exceeds the threshold and cannot participate in the merge
-    //   this.setRTCUserData(object)
-    // }
 
     object.matrix.compose(tempVector, tempQuaternion, tempScale);
     const translate = mtextData.position ? tempVector.clone().sub(mtextData.position) : tempVector;
@@ -169,16 +173,17 @@ export class MText extends THREE.Object3D {
     object.matrix.multiply(translateTempMatrix);
     object.matrix.multiply(tempMatrix);
     object.matrix.multiply(translateTempMatrix.invert());
-    // for debug
-    // const test = new THREE.Line(new THREE.CircleGeometry(3), new THREE.LineBasicMaterial({ color: 0x00ff00 }));
-    // object.add(test);
-    //object.renderOrder = DxfRenderOrder.Text;
     object.matrix.decompose(object.position, object.quaternion, object.scale);
     return object;
   }
 
+  /**
+   * Creates a group of text elements from MText data.
+   * @param mtextData - The MText data to process
+   * @param style - The text style configuration
+   * @returns An object containing the created Three.js object and its height
+   */
   private createMTextGroup(mtextData: MTextData, style: TextStyle) {
-    // no font is exactly supported for now, we'll always use the loaded font with single line texts.
     if (style && style.font && style.font.endsWith('.shx')) {
       const fontFileAndStyleName = `${style.font}_${style.name}`;
       if (!this.styleManager.unsupportedTextStyles[fontFileAndStyleName]) {
@@ -187,8 +192,6 @@ export class MText extends THREE.Object3D {
       this.styleManager.unsupportedTextStyles[fontFileAndStyleName]++;
     }
 
-    // TODO: Calculate this value based on reference rectangle width (DXF group code 41) and
-    // horizontal width of the characters (DXF group code 42)
     const maxWidth = mtextData.width || 0;
     let horizontalAlignment = MTextParagraphAlignment.LEFT;
     if (mtextData.width && mtextData.attachmentPoint) {
@@ -250,12 +253,12 @@ export class MText extends THREE.Object3D {
   }
 
   /**
-   * Calculate anchor point of text string.
-   * @param width Input width of text string.
-   * @param height Input height of text string.
-   * @param attachmentPoint Input the attachment point of text string. Default is top-left aligned.
-   * @param flowDirection Input the direction that the text string follows from its start to its finish.
-   * @returns Return the calculated anchor point.
+   * Calculates the anchor point for text positioning based on alignment and flow direction.
+   * @param width - The width of the text
+   * @param height - The height of the text
+   * @param attachmentPoint - The attachment point for text alignment
+   * @param flowDirection - The text flow direction
+   * @returns The calculated anchor point coordinates
    */
   private calculateAnchorPoint(
     width: number,
@@ -319,14 +322,16 @@ export class MText extends THREE.Object3D {
     return { x: anchorX, y: anchorY };
   }
 
+  /**
+   * Recursively calculates bounding boxes for an object and its children.
+   * @param object - The Three.js object to process
+   * @param boxes - Array to store the calculated bounding boxes
+   */
   private getBoxes(object: THREE.Object3D, boxes: THREE.Box3[]) {
-    // Computes the world-axis-aligned bounding box of an object (including its children),
-    // accounting for both the object's, and children's, world transforms
     object.updateWorldMatrix(false, false);
     if (object instanceof THREE.Line || object instanceof THREE.Mesh) {
       const geometry = object.geometry;
 
-      // geometry-level bounding box
       if (geometry.boundingBox === null) {
         geometry.computeBoundingBox();
       }

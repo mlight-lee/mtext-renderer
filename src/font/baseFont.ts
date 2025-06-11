@@ -4,17 +4,20 @@ import { FontType } from './font';
 /**
  * Abstract base class for font implementations.
  * Provides common functionality and interface for font handling.
+ * This class defines the core interface that all font types must implement.
  */
 export abstract class BaseFont {
-  /** Font type */
+  /** The type of font (shx or mesh) */
   public abstract readonly type: FontType;
   /**
-   * Parsed font data. Different types of fonts have different data structure.
+   * The parsed font data. Different types of fonts have different data structures.
+   * This data is used to render characters and calculate metrics.
    */
   public abstract readonly data: unknown;
   /**
    * Record of characters that are not supported by this font.
    * Maps character strings to their occurrence count.
+   * Used for tracking and reporting unsupported characters.
    */
   public unsupportedChars: Record<string, number> = {};
 

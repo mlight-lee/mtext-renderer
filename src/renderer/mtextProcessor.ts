@@ -18,7 +18,7 @@ const tempVector = /*@__PURE__*/ new THREE.Vector3();
 // displayed in property palette of mtext.
 const LINE_SPACING_SCALE_FACTOR = 1.666666;
 
-export interface TextLineFormatOptions {
+export interface MTextFormatOptions {
   /**
    * Font size.
    */
@@ -56,11 +56,11 @@ export interface TextLineFormatOptions {
 /**
  * This class represents lines of texts.
  */
-export class MTextLines {
+export class MTextProcessor {
   private _style: TextStyle;
   private _styleManager: StyleManager;
   private _fontManager: FontManager;
-  private _options: TextLineFormatOptions;
+  private _options: MTextFormatOptions;
   private _totalHeight: number;
   private _hOffset: number;
   private _vOffset: number;
@@ -69,7 +69,8 @@ export class MTextLines {
   private _currentHorizontalAlignment: MTextParagraphAlignment;
   private _currentWidthFactor: number;
   private _currentWordSpace: number;
-  private _currentFont!: string;
+  private _currentBlankWidth: number;
+  private _currentFont: string;
   private _currentFontScaleFactor!: number;
   private _currentFontSize!: number;
   private _currentFontSizeScaleFactor: number;
@@ -81,13 +82,13 @@ export class MTextLines {
    * @param style Input text style
    * @param styleManager Input text style manager instance
    * @param fontManager Input font manager instance
-   * @param options Input line formating options
+   * @param options Input formating options
    */
   constructor(
     style: TextStyle,
     styleManager: StyleManager,
     fontManager: FontManager,
-    options: TextLineFormatOptions
+    options: MTextFormatOptions
   ) {
     this._style = style;
     this._styleManager = styleManager;
@@ -106,6 +107,7 @@ export class MTextLines {
     this._currentFontSizeScaleFactor = 1;
     this._currentMaxFontSize = 0;
     this.initLineParams();
+    this._currentBlankWidth = this.calculateBlankWidth();
   }
 
   get fontManager() {
@@ -394,7 +396,7 @@ export class MTextLines {
   }
 
   private processBlank() {
-    this._hOffset += this.currentFontSize * this.currentWordSpace * this.currentWidthFactor;
+    this._hOffset += this._currentBlankWidth;
   }
 
   private processChar(char: string, geometries: THREE.BufferGeometry[]): void {
@@ -444,6 +446,7 @@ export class MTextLines {
 
   private changeFont(fontName: string) {
     this._currentFont = this.fontManager.findAndReplaceFont(fontName);
+    this._currentBlankWidth = this.calculateBlankWidth();
     this.calcuateLineParams();
   }
 
@@ -557,6 +560,21 @@ export class MTextLines {
           break;
       }
     }
+  }
+
+  /**
+   * In AutoCAD, the width of a regular space character (ASCII 32, the space key on the keyboard) in MText
+   * depends on the current font and text height, and is not a fixed value.
+   * Specifically:
+   * - Space width ≈ Text height × space width ratio defined by the font
+   * - For common TrueType fonts (like Arial), the space width is typically about 1/4 to 1/3 of the text height.
+   * For example, if the text height is 10 (units), the space width would be approximately 2.5 to 3.3 units.
+   * - For SHX fonts (AutoCAD’s built-in vector fonts, such as txt.shx), the space width is often half the text height.
+   * So if the text height is 10, the space width is typically 5 units.
+   */
+  private calculateBlankWidth() {
+    const fontType = this.fontManager.getFontType(this.currentFont);
+    return fontType === 'shx' ? this.currentFontSize * 0.5 : this.currentFontSize * 0.3;
   }
 
   /**

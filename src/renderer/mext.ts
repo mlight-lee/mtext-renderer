@@ -4,7 +4,7 @@ import { FontManager } from '../font';
 import { MTextAttachmentPoint, MTextData, MTextFlowDirection, Point2d, TextStyle } from './types';
 
 import { StyleManager } from './styleManager';
-import { MTextLines, TextLineFormatOptions } from './line';
+import { MTextProcessor, MTextFormatOptions } from './mtextProcessor';
 import {
   MTextContext,
   MTextLineAlignment,
@@ -218,7 +218,7 @@ export class MText extends THREE.Object3D {
     const defaultFontSize = mtextData.height || 0;
     const defaultLineSpaceFactor = mtextData.lineSpaceFactor || 0.3;
     const flowDirection = mtextData.drawingDirection ?? MTextFlowDirection.LEFT_TO_RIGHT;
-    const textLineFormatOptions: TextLineFormatOptions = {
+    const textLineFormatOptions: MTextFormatOptions = {
       fontSize: defaultFontSize,
       widthFactor: mtextData.widthFactor ?? 1,
       lineSpaceFactor: defaultLineSpaceFactor,
@@ -238,7 +238,7 @@ export class MText extends THREE.Object3D {
     const parser = new MTextParser(mtextData.text, context, true);
     const tokens = parser.parse();
 
-    const textLine = new MTextLines(
+    const textLine = new MTextProcessor(
       style,
       this.styleManager,
       this.fontManager,

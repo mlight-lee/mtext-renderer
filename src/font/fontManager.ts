@@ -6,6 +6,7 @@ import { FontCacheManager } from '../cache';
 import { EventManager, getFileName, getFileNameWithoutExtension } from '../common';
 import { FontFactory } from './fontFactory';
 import { FontLoadStatus } from './fontLoader';
+import { FontType } from './font';
 
 /**
  * Font mappings configuration.
@@ -171,6 +172,16 @@ export class FontManager {
   getFontScaleFactor(fontName: string) {
     const font = this.fontMap.get(fontName.toLowerCase());
     return font ? font.getScaleFactor() : 1;
+  }
+
+  /**
+   * Gets type of the specific font
+   * @param fontName - The name of the font
+   * @returns The type of the font. If the specified font can't be found, `undefined` is returned
+   */
+  getFontType(fontName: string): FontType | undefined {
+    const font = this.fontMap.get(fontName.toLowerCase());
+    return font?.type;
   }
 
   /**

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { MText } from '../src/renderer/mext';
+import { MText } from '../src/renderer/mtext';
 import { FontManager } from '../src/font';
 import { StyleManager } from '../src/renderer/styleManager';
 import { DefaultFontLoader } from '../src/font/defaultFontLoader';
@@ -25,13 +25,15 @@ class MTextRendererExample {
 
   // Example texts
   private readonly exampleTexts = {
-    basic: '{\\C1;Hello World}\\P{\\C2;This is a test}\\P{\\C3;MText Renderer}',
+    basic: '{\\C1;Hello World}\\P{\\C2;Diameter: %%c50}\\P{\\C3;Temperature: 25%%d}\\P{\\C4;Tolerance: %%p0.1}\\P{\\C5;MText Renderer}',
     colors:
       '{\\C1;Red Text}\\P{\\C2;Green Text}\\P{\\C3;Blue Text}\\P{\\C4;Yellow Text}\\P{\\C5;Magenta Text}\\P{\\C6;Cyan Text}\\P{\\C7;White Text}',
     formatting:
       '{\\C1;\\W2;Bold Text}\\P{\\C2;\\W0.5;Thin Text}\\P{\\C3;\\O30;Oblique Text}\\P{\\C4;\\Q1;Wide Text}\\P{\\C5;\\Q0.5;Narrow Text}',
     complex:
       '{\\C1;\\W2;Title}\\P{\\C2;This is a paragraph with different styles.}\\P{\\C3;\\W1.5;Subtitle}\\P{\\C4;• First item\\P• Second item\\P• Third item}\\P{\\C5;\\W0.8;Footer text}',
+    stacking:
+      '{\\C1;Basic Fractions:}\\P{\\C2;The value is \\S1/2; and \\S3/4; of the total.}\\P{\\C3;Stacked Fractions:}\\P{\\C4;\\S1 2/3 4; represents \\Sx^ y; in the equation \\S1#2;.}\\P{\\C5;Complex Fractions:}\\P{\\C6;The result \\S1/2/3; is between \\S1^ 2^ 3; and \\S1#2#3;.}',
   };
 
   constructor() {

@@ -372,6 +372,9 @@ export class MTextProcessor {
       } else if (token.type === TokenType.PROPERTIES_CHANGED) {
         this.processFormat(token.data as ChangedProperties);
         this.processGeometries(geometries, group);
+      } else if (token.type === TokenType.STACK) {
+        this.processStack(token.data as string[], geometries);
+        this.processGeometries(geometries, group);
       }
     }
 
@@ -393,6 +396,77 @@ export class MTextProcessor {
     for (let i = 0; i < word.length; i++) {
       this.processChar(word[i], geometries);
     }
+  }
+
+  private processStack(stackData: string[], geometries: THREE.BufferGeometry[]) {
+    const [numerator, denominator, divider] = stackData;
+
+    // Store current position and state
+    const currentHOffset = this._hOffset;
+    const currentVOffset = this._vOffset;
+    const currentWordSpace = this._currentWordSpace;
+
+    // First pass: calculate widths
+    this._hOffset = currentHOffset;
+    this._currentWordSpace = 1;
+    let numeratorWidth = 0;
+    for (let i = 0; i < numerator.length; i++) {
+      const shape = this.getCharShape(numerator[i]);
+      if (shape) {
+        numeratorWidth += shape.width * this.currentWidthFactor;
+      }
+    }
+
+    this._hOffset = currentHOffset;
+    let denominatorWidth = 0;
+    for (let i = 0; i < denominator.length; i++) {
+      const shape = this.getCharShape(denominator[i]);
+      if (shape) {
+        denominatorWidth += shape.width * this.currentWidthFactor;
+      }
+    }
+
+    const fractionWidth = Math.max(numeratorWidth, denominatorWidth);
+    const numeratorOffset = (fractionWidth - numeratorWidth) / 2;
+    const denominatorOffset = (fractionWidth - denominatorWidth) / 2;
+
+    // Second pass: render numerator
+    const numeratorGeometries: THREE.BufferGeometry[] = [];
+    this._hOffset = currentHOffset + numeratorOffset;
+    this._vOffset = currentVOffset + this.currentFontSize * 0.3;
+    for (let i = 0; i < numerator.length; i++) {
+      this.processChar(numerator[i], numeratorGeometries);
+    }
+    geometries.push(...numeratorGeometries);
+
+    // Render denominator
+    const denominatorGeometries: THREE.BufferGeometry[] = [];
+    this._hOffset = currentHOffset + denominatorOffset;
+    this._vOffset = currentVOffset - this.currentFontSize * 0.6;
+    for (let i = 0; i < denominator.length; i++) {
+      this.processChar(denominator[i], denominatorGeometries);
+    }
+    geometries.push(...denominatorGeometries);
+
+    // Render fraction line if needed
+    if (divider === '/' || divider === '#') {
+      const lineGeometry = new THREE.BufferGeometry();
+      const lineVertices = new Float32Array([
+        currentHOffset,
+        currentVOffset - this.currentFontSize * 0.8,
+        0,
+        currentHOffset + fractionWidth,
+        currentVOffset - this.currentFontSize * 0.8,
+        0,
+      ]);
+      lineGeometry.setAttribute('position', new THREE.BufferAttribute(lineVertices, 3));
+      geometries.push(lineGeometry);
+    }
+
+    // Restore state and update horizontal offset
+    this._hOffset = currentHOffset + fractionWidth + this._currentBlankWidth;
+    this._vOffset = currentVOffset;
+    this._currentWordSpace = currentWordSpace;
   }
 
   private processBlank() {
@@ -569,7 +643,7 @@ export class MTextProcessor {
    * - Space width ≈ Text height × space width ratio defined by the font
    * - For common TrueType fonts (like Arial), the space width is typically about 1/4 to 1/3 of the text height.
    * For example, if the text height is 10 (units), the space width would be approximately 2.5 to 3.3 units.
-   * - For SHX fonts (AutoCAD’s built-in vector fonts, such as txt.shx), the space width is often half the text height.
+   * - For SHX fonts (AutoCAD's built-in vector fonts, such as txt.shx), the space width is often half the text height.
    * So if the text height is 10, the space width is typically 5 units.
    */
   private calculateBlankWidth() {

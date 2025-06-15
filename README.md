@@ -7,6 +7,7 @@ A flexible and extensible AutoCAD MText renderer implementation using Three.js. 
 - Render AutoCAD MText content using Three.js
 - Modular font loading system
 - Font management and dynamic font loading
+- Cache parsed fonts to improve rendering performance
 
 ## Core Components
 
@@ -32,9 +33,9 @@ will be stored in local IndexedDB to improve performance. Default value is true.
 - `getUnsupportedChar()`: Gets record of unsupported characters
 - `release()`: Releases all loaded fonts
 
-### FontLoader
+### FontLoader & DefaultFontLoader
 
-Interface for font loading operations. The default implementation [DefaultFontLoader](./src/font/defaultFontLoader.ts) uses a CDN-based font repository.
+Interface for font loading operations. The default implementation [DefaultFontLoader](./src/font/defaultFontLoader.ts) uses a [CDN-based font repository](https://cdn.jsdelivr.net/gh/mlight-lee/cad-data/fonts/). It loads font metadata from a JSON file and provides access to available fonts. You can implement one font loader by your own if you want to use fonts hosted in your own server.
 
 **Public Methods:**
 - `load(fontNames)`: Loads specified fonts into the system

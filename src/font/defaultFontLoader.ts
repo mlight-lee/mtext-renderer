@@ -3,7 +3,7 @@ import { FontInfo, FontLoader } from './fontLoader';
 
 /**
  * Default implementation of the FontLoader interface.
- * This class provides font loading functionality using a CDN-based font repository.
+ * This class provides font loading functionality using a [CDN-based font repository](https://cdn.jsdelivr.net/gh/mlight-lee/cad-data/fonts/).
  * It loads font metadata from a JSON file and provides access to available fonts.
  */
 export class DefaultFontLoader implements FontLoader {

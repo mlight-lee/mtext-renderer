@@ -405,6 +405,8 @@ export class MTextProcessor {
     const currentHOffset = this._hOffset;
     const currentVOffset = this._vOffset;
     const currentWordSpace = this._currentWordSpace;
+    const currentFontSize = this._currentFontSize;
+    const currentFontSizeScaleFactor = this._currentFontSizeScaleFactor;
 
     // First pass: calculate widths
     this._hOffset = currentHOffset;
@@ -430,41 +432,77 @@ export class MTextProcessor {
     const numeratorOffset = (fractionWidth - numeratorWidth) / 2;
     const denominatorOffset = (fractionWidth - denominatorWidth) / 2;
 
-    // Second pass: render numerator
-    const numeratorGeometries: THREE.BufferGeometry[] = [];
-    this._hOffset = currentHOffset + numeratorOffset;
-    this._vOffset = currentVOffset + this.currentFontSize * 0.3;
-    for (let i = 0; i < numerator.length; i++) {
-      this.processChar(numerator[i], numeratorGeometries);
-    }
-    geometries.push(...numeratorGeometries);
+    // Handle different stack types based on divider
+    if (divider === '^') {
+      // Scale down font size to 70% for subscript and superscript
+      this._currentFontSizeScaleFactor = currentFontSizeScaleFactor * 0.7;
+      this.calcuateLineParams();
 
-    // Render denominator
-    const denominatorGeometries: THREE.BufferGeometry[] = [];
-    this._hOffset = currentHOffset + denominatorOffset;
-    this._vOffset = currentVOffset - this.currentFontSize * 0.6;
-    for (let i = 0; i < denominator.length; i++) {
-      this.processChar(denominator[i], denominatorGeometries);
-    }
-    geometries.push(...denominatorGeometries);
+      // Superscript case
+      if (numerator && !denominator) {
+        const superscriptGeometries: THREE.BufferGeometry[] = [];
+        this._hOffset = currentHOffset;
+        this._vOffset = currentVOffset + currentFontSize * 0.1;
+        for (let i = 0; i < numerator.length; i++) {
+          this.processChar(numerator[i], superscriptGeometries);
+        }
+        geometries.push(...superscriptGeometries);
+        this._hOffset = currentHOffset + numeratorWidth + this._currentBlankWidth;
+      }
+      // Subscript case
+      else if (!numerator && denominator) {
+        const subscriptGeometries: THREE.BufferGeometry[] = [];
+        this._hOffset = currentHOffset;
+        this._vOffset = currentVOffset - currentFontSize * 0.3;
+        for (let i = 0; i < denominator.length; i++) {
+          this.processChar(denominator[i], subscriptGeometries);
+        }
+        geometries.push(...subscriptGeometries);
+        this._hOffset = currentHOffset + denominatorWidth + this._currentBlankWidth;
+      }
 
-    // Render fraction line if needed
-    if (divider === '/' || divider === '#') {
-      const lineGeometry = new THREE.BufferGeometry();
-      const lineVertices = new Float32Array([
-        currentHOffset,
-        currentVOffset - this.currentFontSize * 0.8,
-        0,
-        currentHOffset + fractionWidth,
-        currentVOffset - this.currentFontSize * 0.8,
-        0,
-      ]);
-      lineGeometry.setAttribute('position', new THREE.BufferAttribute(lineVertices, 3));
-      geometries.push(lineGeometry);
+      // Restore original font size
+      this._currentFontSizeScaleFactor = currentFontSizeScaleFactor;
+      this.calcuateLineParams();
+    } else {
+      // Fraction case
+      // Second pass: render numerator
+      const numeratorGeometries: THREE.BufferGeometry[] = [];
+      this._hOffset = currentHOffset + numeratorOffset;
+      this._vOffset = currentVOffset + this.currentFontSize * 0.3;
+      for (let i = 0; i < numerator.length; i++) {
+        this.processChar(numerator[i], numeratorGeometries);
+      }
+      geometries.push(...numeratorGeometries);
+
+      // Render denominator
+      const denominatorGeometries: THREE.BufferGeometry[] = [];
+      this._hOffset = currentHOffset + denominatorOffset;
+      this._vOffset = currentVOffset - this.currentFontSize * 0.6;
+      for (let i = 0; i < denominator.length; i++) {
+        this.processChar(denominator[i], denominatorGeometries);
+      }
+      geometries.push(...denominatorGeometries);
+
+      // Render fraction line if needed
+      if (divider === '/' || divider === '#') {
+        const lineGeometry = new THREE.BufferGeometry();
+        const lineVertices = new Float32Array([
+          currentHOffset,
+          currentVOffset - this.currentFontSize * 0.8,
+          0,
+          currentHOffset + fractionWidth,
+          currentVOffset - this.currentFontSize * 0.8,
+          0,
+        ]);
+        lineGeometry.setAttribute('position', new THREE.BufferAttribute(lineVertices, 3));
+        geometries.push(lineGeometry);
+      }
+
+      this._hOffset = currentHOffset + fractionWidth + this._currentBlankWidth;
     }
 
-    // Restore state and update horizontal offset
-    this._hOffset = currentHOffset + fractionWidth + this._currentBlankWidth;
+    // Restore state
     this._vOffset = currentVOffset;
     this._currentWordSpace = currentWordSpace;
   }

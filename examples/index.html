@@ -97,16 +97,18 @@
 <body>
     <div id="controls">
         <h2>MText Renderer Example</h2>
+        <label for="font-select">Default Font:</label>
         <select id="font-select">
             <option value="Arial">Arial</option>
         </select>
+        <label for="mtext-input">MText:</label>
         <textarea id="mtext-input" placeholder="Enter MText content here... (Special characters: %%c=Ø, %%d=°, %%p=±)">{\C1;Hello World}\P{\C2;This is a test}\P{\C3;MText Renderer}</textarea>
-        <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
             <button id="render-btn">Render</button>
-        </div>
-        <div class="checkbox-container">
-            <input type="checkbox" id="show-bounding-box" checked>
-            <label for="show-bounding-box">Show Bounding Box</label>
+            <div class="checkbox-container" style="margin: 0;">
+                <input type="checkbox" id="show-bounding-box" checked>
+                <label for="show-bounding-box">Show Bounding Box</label>
+            </div>
         </div>
         <div class="examples">
             <h3>Example Texts:</h3>

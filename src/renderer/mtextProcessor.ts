@@ -51,6 +51,10 @@ export interface MTextFormatOptions {
    * The color of the current layer which is used when the text color is by layer.
    */
   byLayerColor: number;
+  /**
+   * Whether to remove font name extension.
+   */
+  removeFontExtension: boolean;
 }
 
 /**
@@ -557,7 +561,11 @@ export class MTextProcessor {
   }
 
   private changeFont(fontName: string) {
-    this._currentFont = this.fontManager.findAndReplaceFont(fontName);
+    let processedFontName = fontName;
+    if (this._options.removeFontExtension) {
+      processedFontName = fontName.replace(/\.(ttf|otf|woff|shx)$/, '');
+    }
+    this._currentFont = this.fontManager.findAndReplaceFont(processedFontName);
     this._currentBlankWidth = this.calculateBlankWidth();
     this.calcuateLineParams();
   }

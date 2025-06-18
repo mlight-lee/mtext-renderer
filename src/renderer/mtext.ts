@@ -227,6 +227,7 @@ export class MText extends THREE.Object3D {
       flowDirection: flowDirection,
       byBlockColor: 0xffffff,
       byLayerColor: 0xffffff,
+      removeFontExtension: true,
     };
 
     const context = new MTextContext();

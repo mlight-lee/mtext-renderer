@@ -4,6 +4,7 @@ import { MText } from '../src/renderer/mtext';
 import { FontManager } from '../src/font';
 import { StyleManager } from '../src/renderer/styleManager';
 import { DefaultFontLoader } from '../src/font/defaultFontLoader';
+import { getFonts } from '@mlightcad/mtext-parser';
 
 class MTextRendererExample {
   private scene: THREE.Scene;
@@ -30,7 +31,7 @@ class MTextRendererExample {
     colors:
       '{\\C1;Red Text}\\P{\\C2;Green Text}\\P{\\C3;Blue Text}\\P{\\C4;Yellow Text}\\P{\\C5;Magenta Text}\\P{\\C6;Cyan Text}\\P{\\C7;White Text}',
     formatting:
-      '{\\C1;\\W2;Bold Text}\\P{\\C2;\\W0.5;Thin Text}\\P{\\C3;\\O30;Oblique Text}\\P{\\C4;\\Q1;Wide Text}\\P{\\C5;\\Q0.5;Narrow Text}',
+      '{\\C1;\\W2;\\FSimSun;SimSun Text}\\P{\\C2;\\W0.5;\\FArial;Arial Text}\\P{\\C3;\\O30;\\Faehalf.shx;SHX Text}\\P{\\C4;\\Q1;\\FSimHei;SimHei Text}\\P{\\C5;\\Q0.5;\\FSimKai;SimKai Text}',
     complex:
       '{\\C1;\\W2;Title}\\P{\\C2;This is a paragraph with different styles.}\\P{\\C3;\\W1.5;Subtitle}\\P{\\C4;• First item\\P• Second item\\P• Third item}\\P{\\C5;\\W0.8;Footer text}',
     stacking:
@@ -172,13 +173,34 @@ class MTextRendererExample {
 
     // Example buttons
     document.querySelectorAll('.example-btn').forEach((button) => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const exampleType = (button as HTMLElement).dataset.example;
         if (exampleType && this.exampleTexts[exampleType as keyof typeof this.exampleTexts]) {
-          this.mtextInput.value = this.exampleTexts[exampleType as keyof typeof this.exampleTexts];
-          this.renderMText(this.mtextInput.value);
-          this.statusDiv.textContent = 'Example loaded';
-          this.statusDiv.style.color = '#0f0';
+          const content = this.exampleTexts[exampleType as keyof typeof this.exampleTexts];
+          this.mtextInput.value = content;
+
+          // Get required fonts from the MText content
+          const requiredFonts = Array.from(getFonts(content, true));
+          if (requiredFonts.length > 0) {
+            try {
+              // Show loading status
+              this.statusDiv.textContent = `Loading fonts: ${requiredFonts.join(', ')}...`;
+              this.statusDiv.style.color = '#ffa500';
+
+              // Load the required fonts
+              await this.fontLoader.load(requiredFonts);
+
+              // Update status
+              this.statusDiv.textContent = 'Fonts loaded successfully';
+              this.statusDiv.style.color = '#0f0';
+            } catch (error) {
+              console.error('Error loading fonts:', error);
+              this.statusDiv.textContent = `Error loading fonts: ${requiredFonts.join(', ')}`;
+              this.statusDiv.style.color = '#f00';
+            }
+          }
+
+          this.renderMText(content);
         }
       });
     });

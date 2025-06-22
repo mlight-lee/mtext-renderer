@@ -80,6 +80,9 @@ export class MTextProcessor {
   private _currentFontSizeScaleFactor: number;
   private _currentColor: number;
   private _currentMaxFontSize: number;
+  private _currentUnderline: boolean = false;
+  private _currentOverline: boolean = false;
+  private _currentStrikeThrough: boolean = false;
 
   /**
    * Construct one instance of this class and initialize some properties with default values.
@@ -345,8 +348,26 @@ export class MTextProcessor {
           this._currentHorizontalAlignment = item.changes.paragraph.align;
         }
         break;
+      case 'L':
+        this._currentUnderline = true;
+        break;
+      case 'l':
+        this._currentUnderline = false;
+        break;
+      case 'O':
+        this._currentOverline = true;
+        break;
+      case 'o':
+        this._currentOverline = false;
+        break;
+      case 'K':
+        this._currentStrikeThrough = true;
+        break;
+      case 'k':
+        this._currentStrikeThrough = false;
+        break;
       default:
-        // TODO: handle psm, underscore, overscore, strike, and etc.
+        // TODO: handle psm, underscore, overscore, and etc.
         break;
     }
   }
@@ -357,52 +378,66 @@ export class MTextProcessor {
    */
   processText(tokens: Generator<MTextToken>) {
     const geometries: THREE.BufferGeometry[] = [];
+    const lineGeometries: THREE.BufferGeometry[] = [];
     const group: THREE.Group = new THREE.Group();
 
     for (const token of tokens) {
       if (token.type === TokenType.NEW_PARAGRAPH) {
         this.startNewLine();
-        this.processGeometries(geometries, group);
+        this.processGeometries(geometries, lineGeometries, group);
       } else if (token.type === TokenType.WORD) {
         const words = token.data;
         if (Array.isArray(words)) {
-          words.forEach((word) => this.processWord(word, geometries));
+          words.forEach((word) => this.processWord(word, geometries, lineGeometries));
         } else if (typeof words === 'string' && words.length > 0) {
-          this.processWord(words, geometries);
+          this.processWord(words, geometries, lineGeometries);
         }
-        this.processGeometries(geometries, group);
+        this.processGeometries(geometries, lineGeometries, group);
       } else if (token.type === TokenType.SPACE) {
         this.processBlank();
       } else if (token.type === TokenType.PROPERTIES_CHANGED) {
         this.processFormat(token.data as ChangedProperties);
-        this.processGeometries(geometries, group);
+        this.processGeometries(geometries, lineGeometries, group);
       } else if (token.type === TokenType.STACK) {
-        this.processStack(token.data as string[], geometries);
-        this.processGeometries(geometries, group);
+        this.processStack(token.data as string[], geometries, lineGeometries);
+        this.processGeometries(geometries, lineGeometries, group);
       }
     }
 
-    if (geometries.length > 0) {
-      this.processGeometries(geometries, group);
+    if (geometries.length > 0 || lineGeometries.length > 0) {
+      this.processGeometries(geometries, lineGeometries, group);
     }
     return group;
   }
 
-  private processGeometries(geometries: THREE.BufferGeometry[], group: THREE.Group) {
-    if (geometries.length > 0) {
-      const object = this.toThreeObject(geometries);
+  private processGeometries(
+    geometries: THREE.BufferGeometry[],
+    lineGeometries: THREE.BufferGeometry[],
+    group: THREE.Group
+  ) {
+    if (geometries.length > 0 || lineGeometries.length > 0) {
+      const object = this.toThreeObject(geometries, lineGeometries);
       group.add(object);
       geometries.length = 0;
+      lineGeometries.length = 0;
     }
   }
 
-  private processWord(word: string, geometries: THREE.BufferGeometry[]) {
+  private processWord(
+    word: string,
+    geometries: THREE.BufferGeometry[],
+    lineGeometries: THREE.BufferGeometry[]
+  ) {
     for (let i = 0; i < word.length; i++) {
-      this.processChar(word[i], geometries);
+      this.processChar(word[i], geometries, lineGeometries);
     }
   }
 
-  private processStack(stackData: string[], geometries: THREE.BufferGeometry[]) {
+  private processStack(
+    stackData: string[],
+    geometries: THREE.BufferGeometry[],
+    lineGeometries: THREE.BufferGeometry[]
+  ) {
     const [numerator, denominator, divider] = stackData;
 
     // Store current position and state
@@ -445,23 +480,27 @@ export class MTextProcessor {
       // Superscript case
       if (numerator && !denominator) {
         const superscriptGeometries: THREE.BufferGeometry[] = [];
+        const superscriptLineGeometries: THREE.BufferGeometry[] = [];
         this._hOffset = currentHOffset;
         this._vOffset = currentVOffset + currentFontSize * 0.1;
         for (let i = 0; i < numerator.length; i++) {
-          this.processChar(numerator[i], superscriptGeometries);
+          this.processChar(numerator[i], superscriptGeometries, superscriptLineGeometries);
         }
         geometries.push(...superscriptGeometries);
+        lineGeometries.push(...superscriptLineGeometries);
         this._hOffset = currentHOffset + numeratorWidth + this._currentBlankWidth;
       }
       // Subscript case
       else if (!numerator && denominator) {
         const subscriptGeometries: THREE.BufferGeometry[] = [];
+        const subscriptLineGeometries: THREE.BufferGeometry[] = [];
         this._hOffset = currentHOffset;
         this._vOffset = currentVOffset - currentFontSize * 0.3;
         for (let i = 0; i < denominator.length; i++) {
-          this.processChar(denominator[i], subscriptGeometries);
+          this.processChar(denominator[i], subscriptGeometries, subscriptLineGeometries);
         }
         geometries.push(...subscriptGeometries);
+        lineGeometries.push(...subscriptLineGeometries);
         this._hOffset = currentHOffset + denominatorWidth + this._currentBlankWidth;
       }
 
@@ -472,21 +511,25 @@ export class MTextProcessor {
       // Fraction case
       // Second pass: render numerator
       const numeratorGeometries: THREE.BufferGeometry[] = [];
+      const numeratorLineGeometries: THREE.BufferGeometry[] = [];
       this._hOffset = currentHOffset + numeratorOffset;
       this._vOffset = currentVOffset + this.currentFontSize * 0.3;
       for (let i = 0; i < numerator.length; i++) {
-        this.processChar(numerator[i], numeratorGeometries);
+        this.processChar(numerator[i], numeratorGeometries, numeratorLineGeometries);
       }
       geometries.push(...numeratorGeometries);
+      lineGeometries.push(...numeratorLineGeometries);
 
       // Render denominator
       const denominatorGeometries: THREE.BufferGeometry[] = [];
+      const denominatorLineGeometries: THREE.BufferGeometry[] = [];
       this._hOffset = currentHOffset + denominatorOffset;
       this._vOffset = currentVOffset - this.currentFontSize * 0.6;
       for (let i = 0; i < denominator.length; i++) {
-        this.processChar(denominator[i], denominatorGeometries);
+        this.processChar(denominator[i], denominatorGeometries, denominatorLineGeometries);
       }
       geometries.push(...denominatorGeometries);
+      lineGeometries.push(...denominatorLineGeometries);
 
       // Render fraction line if needed
       if (divider === '/' || divider === '#') {
@@ -500,7 +543,8 @@ export class MTextProcessor {
           0,
         ]);
         lineGeometry.setAttribute('position', new THREE.BufferAttribute(lineVertices, 3));
-        geometries.push(lineGeometry);
+        lineGeometry.setIndex(null);
+        lineGeometries.push(lineGeometry);
       }
 
       this._hOffset = currentHOffset + fractionWidth + this._currentBlankWidth;
@@ -515,7 +559,11 @@ export class MTextProcessor {
     this._hOffset += this._currentBlankWidth;
   }
 
-  private processChar(char: string, geometries: THREE.BufferGeometry[]): void {
+  private processChar(
+    char: string,
+    geometries: THREE.BufferGeometry[],
+    lineGeometries: THREE.BufferGeometry[]
+  ): void {
     const shape = this.getCharShape(char);
     if (!shape) {
       this.processBlank();
@@ -529,23 +577,65 @@ export class MTextProcessor {
       this.startNewLine();
     }
 
-    if (this.flowDirection == MTextFlowDirection.BOTTOM_TO_TOP) {
-      geometry.translate(this.hOffset, this.vOffset, 0);
-    } else {
-      // The origin of font shape geometry is left-bottom cornor point instead of left-top cornor point.
-      // So we need to substract the height of texts so that texts are shown like its origin point is
-      // left-top point if the flow direction of text is from top to bottom.
-      geometry.translate(this.hOffset, this.vOffset - this.currentFontSize, 0);
-    }
+    let charX = this.hOffset;
+    let charY =
+      this.flowDirection == MTextFlowDirection.BOTTOM_TO_TOP
+        ? this.vOffset
+        : this.vOffset - this.currentFontSize;
+    let charWidth = shape.width * this.currentWidthFactor;
+    let charHeight = this.currentFontSize;
 
-    // If the horizontal alignment is distributed, just ignore wordspace.
-    // Wordspace will be calcualted in method 'processAlignment'.
+    geometry.translate(charX, charY, 0);
+
     if (this.currentHorizontalAlignment == MTextParagraphAlignment.DISTRIBUTED) {
       this._hOffset += shape.width * this.currentWidthFactor;
     } else {
       this._hOffset += shape.width * this.currentWordSpace * this.currentWidthFactor;
     }
     geometries.push(geometry);
+
+    // Underline, overline, strikeThrough
+    const lineOffset = charHeight * 0.05;
+    const lineZ = 0.001;
+    if (this._currentUnderline) {
+      const underlineGeom = new THREE.BufferGeometry();
+      const underlineY = charY - lineOffset;
+      underlineGeom.setAttribute(
+        'position',
+        new THREE.BufferAttribute(
+          new Float32Array([charX, underlineY, lineZ, charX + charWidth, underlineY, lineZ]),
+          3
+        )
+      );
+      underlineGeom.setIndex(null);
+      lineGeometries.push(underlineGeom);
+    }
+    if (this._currentOverline) {
+      const overlineGeom = new THREE.BufferGeometry();
+      const overlineY = charY + charHeight + lineOffset;
+      overlineGeom.setAttribute(
+        'position',
+        new THREE.BufferAttribute(
+          new Float32Array([charX, overlineY, lineZ, charX + charWidth, overlineY, lineZ]),
+          3
+        )
+      );
+      overlineGeom.setIndex(null);
+      lineGeometries.push(overlineGeom);
+    }
+    if (this._currentStrikeThrough) {
+      const strikeGeom = new THREE.BufferGeometry();
+      const strikeY = charY + charHeight / 2;
+      strikeGeom.setAttribute(
+        'position',
+        new THREE.BufferAttribute(
+          new Float32Array([charX, strikeY, lineZ, charX + charWidth, strikeY, lineZ]),
+          3
+        )
+      );
+      strikeGeom.setIndex(null);
+      lineGeometries.push(strikeGeom);
+    }
   }
 
   processLastLine() {
@@ -702,31 +792,37 @@ export class MTextProcessor {
    * @param geometries Input text shape geometries
    * @returns Return three.js object created from the specified text shape geometries
    */
-  private toThreeObject(geometries: THREE.BufferGeometry[]) {
+  private toThreeObject(
+    geometries: THREE.BufferGeometry[],
+    lineGeometries: THREE.BufferGeometry[]
+  ) {
     const meshGroup = new THREE.Group();
-    if (geometries.length > 0) {
-      const color = this.currentColor;
-      const meshGeoms = geometries.filter((g) => g instanceof THREE.ExtrudeGeometry);
-      const lineGeoms = geometries.filter((g) => !(g instanceof THREE.ExtrudeGeometry));
-      // Sometimes linear text may not be supported, so it is possible to create a mesh text
-      if (meshGeoms.length > 0) {
-        const mesh = new THREE.Mesh();
-        mesh.geometry = mergeGeometries(meshGeoms);
-        mesh.material = this.styleManager.getMeshBasicMaterial(color);
-        // Add the flag to check intersection using bounding box of the mesh
-        mesh.userData.bboxIntersectionCheck = true;
-        meshGroup.add(mesh);
-      }
-      if (lineGeoms.length > 0) {
-        const mesh = new THREE.LineSegments();
-        mesh.geometry = mergeGeometries(lineGeoms);
-        mesh.material = this.styleManager.getLineBasicMaterial(color);
-        // Add the flag to check intersection using bounding box of the mesh
-        mesh.userData.bboxIntersectionCheck = true;
-        meshGroup.add(mesh);
-      }
+    const color = this.currentColor;
+
+    // Mesh font (ExtrudeGeometry)
+    const meshGeoms = geometries.filter((g) => g instanceof THREE.ExtrudeGeometry);
+    if (meshGeoms.length > 0) {
+      const mesh = new THREE.Mesh();
+      mesh.geometry = mergeGeometries(meshGeoms);
+      mesh.material = this.styleManager.getMeshBasicMaterial(color);
+      mesh.userData.bboxIntersectionCheck = true;
+      meshGroup.add(mesh);
     }
-    // reduce hierarchy
+
+    // All line-based geometries: SHX font + underline/overline/strikeThrough
+    const allLineGeoms = [
+      ...lineGeometries,
+      ...geometries.filter((g) => !(g instanceof THREE.ExtrudeGeometry)),
+    ];
+    if (allLineGeoms.length > 0) {
+      const lineMesh = new THREE.LineSegments();
+      lineMesh.geometry = mergeGeometries(allLineGeoms);
+      lineMesh.material = this.styleManager.getLineBasicMaterial(color);
+      lineMesh.userData.bboxIntersectionCheck = true;
+      meshGroup.add(lineMesh);
+    }
+
+    // Reduce hierarchy if only one child
     if (meshGroup.children.length === 1) {
       return meshGroup.children[0];
     } else {

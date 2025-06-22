@@ -27,11 +27,11 @@ class MTextRendererExample {
   // Example texts
   private readonly exampleTexts = {
     basic:
-      '{\\C1;Hello World}\\P{\\C2;Diameter: %%c50}\\P{\\C3;Temperature: 25%%d}\\P{\\C4;Tolerance: %%p0.1}\\P{\\C5;MText Renderer}',
+      '{\\C1;Hello World}\\P{\\C2;Diameter: %%c50}\\P{\\C3;Temperature: 25%%d}\\P{\\C4;Tolerance: %%p0.1}\\P{\\C6;\\LUnderlined\\l, \\OOverlined\\o, \\KStriked\\k}',
     colors:
       '{\\C1;Red Text}\\P{\\C2;Green Text}\\P{\\C3;Blue Text}\\P{\\C4;Yellow Text}\\P{\\C5;Magenta Text}\\P{\\C6;Cyan Text}\\P{\\C7;White Text}',
     formatting:
-      '{\\C1;\\W2;\\FSimSun;SimSun Text}\\P{\\C2;\\W0.5;\\FArial;Arial Text}\\P{\\C3;\\O30;\\Faehalf.shx;SHX Text}\\P{\\C4;\\Q1;\\FSimHei;SimHei Text}\\P{\\C5;\\Q0.5;\\FSimKai;SimKai Text}',
+      '{\\C1;\\W2;\\FSimSun;SimSun Text}\\P{\\C2;\\W0.5;\\FArial;Arial Text}\\P{\\C3;30;\\Faehalf.shx;SHX Text}\\P{\\C4;\\Q1;\\FSimHei;SimHei Text}\\P{\\C5;\\Q0.5;\\FSimKai;SimKai Text}',
     complex:
       '{\\C1;\\W2;Title}\\P{\\C2;This is a paragraph with different styles.}\\P{\\C3;\\W1.5;Subtitle}\\P{\\C4;• First item\\P• Second item\\P• Third item}\\P{\\C5;\\W0.8;Footer text}',
     stacking:

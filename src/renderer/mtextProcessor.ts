@@ -502,7 +502,7 @@ export class MTextProcessor {
         }
         geometries.push(...superscriptGeometries);
         lineGeometries.push(...superscriptLineGeometries);
-        this._hOffset = currentHOffset + numeratorWidth + this._currentBlankWidth;
+        this._hOffset = currentHOffset + numeratorWidth;
       }
       // Subscript case
       else if (!numerator && denominator) {
@@ -515,7 +515,7 @@ export class MTextProcessor {
         }
         geometries.push(...subscriptGeometries);
         lineGeometries.push(...subscriptLineGeometries);
-        this._hOffset = currentHOffset + denominatorWidth + this._currentBlankWidth;
+        this._hOffset = currentHOffset + denominatorWidth;
       }
 
       // Restore original font size
@@ -561,7 +561,7 @@ export class MTextProcessor {
         lineGeometries.push(lineGeometry);
       }
 
-      this._hOffset = currentHOffset + fractionWidth + this._currentBlankWidth;
+      this._hOffset = currentHOffset + fractionWidth;
     }
 
     // Restore state

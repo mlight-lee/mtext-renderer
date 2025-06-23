@@ -27,7 +27,7 @@ class MTextRendererExample {
   // Example texts
   private readonly exampleTexts = {
     basic:
-      '{\\C1;Hello World}\\P{\\C2;Diameter: %%c50}\\P{\\C3;Temperature: 25%%d}\\P{\\C4;Tolerance: %%p0.1}\\P{\\C6;\\LUnderlined\\l, \\OOverlined\\o, \\KStriked\\k}',
+      '{\\C1;Hello World}\\P{\\C2;Diameter: %%c50}\\P{\\C3;Temperature: 25%%d}\\P{\\C4;Tolerance: %%p0.1}\\P{\\C6;\\LUnderlined\\l, \\OOverlined\\o, \\KStriked\\k}\\P{\\C7;\\Q15;Oblique 15 deg}',
     colors:
       '{\\C1;Red Text}\\P{\\C2;Green Text}\\P{\\C3;Blue Text}\\P{\\C4;Yellow Text}\\P{\\C5;Magenta Text}\\P{\\C6;Cyan Text}\\P{\\C7;White Text}',
     formatting:

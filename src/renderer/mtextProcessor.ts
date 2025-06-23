@@ -83,6 +83,7 @@ export class MTextProcessor {
   private _currentUnderline: boolean = false;
   private _currentOverline: boolean = false;
   private _currentStrikeThrough: boolean = false;
+  private _currentObliqueAngle: number = 0;
 
   /**
    * Construct one instance of this class and initialize some properties with default values.
@@ -113,6 +114,7 @@ export class MTextProcessor {
     this._currentColor = options.byLayerColor;
     this._currentFontSizeScaleFactor = 1;
     this._currentMaxFontSize = 0;
+    this._currentObliqueAngle = style.obliqueAngle || 0;
     this.initLineParams();
     this._currentBlankWidth = this.calculateBlankWidth();
   }
@@ -287,6 +289,13 @@ export class MTextProcessor {
   }
 
   /**
+   * Oblique angle of current character
+   */
+  get currentObliqueAngle() {
+    return this._currentObliqueAngle;
+  }
+
+  /**
    * Process text format information
    * @param item Input mtext inline codes
    */
@@ -365,6 +374,11 @@ export class MTextProcessor {
         break;
       case 'k':
         this._currentStrikeThrough = false;
+        break;
+      case 'Q':
+        if (item.changes.oblique !== undefined) {
+          this._currentObliqueAngle = item.changes.oblique;
+        }
         break;
       default:
         // TODO: handle psm, underscore, overscore, and etc.
@@ -572,6 +586,20 @@ export class MTextProcessor {
 
     const geometry = shape.toGeometry();
     geometry.scale(this.currentWidthFactor, 1, 1);
+
+    // Apply oblique/skew transformation if needed
+    if (this.currentObliqueAngle) {
+      // Oblique/skew is typically along X axis by tan(angle)
+      const angleRad = (this.currentObliqueAngle * Math.PI) / 180;
+      const skewMatrix = new THREE.Matrix4();
+      skewMatrix.set(
+        1, Math.tan(angleRad), 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      );
+      geometry.applyMatrix4(skewMatrix);
+    }
 
     if (this.hOffset > (this.maxWidth || Infinity)) {
       this.startNewLine();

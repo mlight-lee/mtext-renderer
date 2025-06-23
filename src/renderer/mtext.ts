@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 
 import { FontManager } from '../font';
-import { MTextAttachmentPoint, MTextData, MTextFlowDirection, Point2d, TextStyle } from './types';
+import {
+  ColorSettings,
+  MTextAttachmentPoint,
+  MTextData,
+  MTextFlowDirection,
+  Point2d,
+  TextStyle,
+} from './types';
 
 import { StyleManager } from './styleManager';
 import { MTextProcessor, MTextFormatOptions } from './mtextProcessor';
@@ -27,13 +34,15 @@ const AxisX = /*@__PURE__*/ new THREE.Vector3(1, 0, 0);
  */
 export class MText extends THREE.Object3D {
   /** The text style configuration for this MText object */
-  protected _style: TextStyle;
+  private _style: TextStyle;
   /** The style manager instance for handling text styles */
-  protected _styleManager: StyleManager;
+  private _styleManager: StyleManager;
   /** The font manager instance for handling font operations */
-  protected _fontManager: FontManager;
+  private _fontManager: FontManager;
+  /** Color settings used to decided font color */
+  private _colorSettings: ColorSettings;
   /** The bounding box of the entire MText object */
-  protected _box: THREE.Box3;
+  private _box: THREE.Box3;
   /** Array of bounding boxes for individual text elements */
   private _boxes: THREE.Box3[];
 
@@ -43,17 +52,23 @@ export class MText extends THREE.Object3D {
    * @param style - The text style configuration
    * @param styleManager - The style manager instance
    * @param fontManager - The font manager instance
+   * @param colorSettings - Color settings used to decided font color
    */
   constructor(
     text: MTextData,
     style: TextStyle,
     styleManager: StyleManager,
-    fontManager: FontManager
+    fontManager: FontManager,
+    colorSettings: ColorSettings = { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
   ) {
     super();
     this._style = style;
     this._styleManager = styleManager;
     this._fontManager = fontManager;
+    this._colorSettings = {
+      byLayerColor: colorSettings.byLayerColor,
+      byBlockColor: colorSettings.byBlockColor,
+    };
     this._box = new THREE.Box3();
     this._boxes = [];
     const obj = this.loadMText(text, style);
@@ -225,8 +240,8 @@ export class MText extends THREE.Object3D {
       horizontalAlignment: horizontalAlignment,
       maxWidth: maxWidth,
       flowDirection: flowDirection,
-      byBlockColor: 0xffffff,
-      byLayerColor: 0xffffff,
+      byBlockColor: this._colorSettings.byBlockColor,
+      byLayerColor: this._colorSettings.byLayerColor,
       removeFontExtension: true,
     };
 

@@ -592,12 +592,7 @@ export class MTextProcessor {
       // Oblique/skew is typically along X axis by tan(angle)
       const angleRad = (this.currentObliqueAngle * Math.PI) / 180;
       const skewMatrix = new THREE.Matrix4();
-      skewMatrix.set(
-        1, Math.tan(angleRad), 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-      );
+      skewMatrix.set(1, Math.tan(angleRad), 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
       geometry.applyMatrix4(skewMatrix);
     }
 

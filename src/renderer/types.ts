@@ -58,3 +58,11 @@ export interface TextStyle {
   extendedFont?: string;
   color: number;
 }
+
+/**
+ * Color settings used to decided font color
+ */
+export interface ColorSettings {
+  byLayerColor: number;
+  byBlockColor: number;
+}

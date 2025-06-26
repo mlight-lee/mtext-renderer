@@ -8,7 +8,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'MTextRenderer',
-      fileName: 'mtext-renderer',
+      fileName: 'index',
       formats: ['es', 'umd']
     },
     rollupOptions: {

@@ -310,6 +310,7 @@ export class MTextProcessor {
           }
           break;
         }
+      case 'c':
       case 'C':
         if (item.changes.aci) {
           if (item.changes.aci === 0) {

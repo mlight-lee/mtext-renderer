@@ -29,7 +29,7 @@ class MTextRendererExample {
     basic:
       '{\\C1;Hello World}\\P{\\C2;Diameter: %%c50}\\P{\\C3;Temperature: 25%%d}\\P{\\C4;Tolerance: %%p0.1}\\P{\\C6;\\LUnderlined\\l, \\OOverlined\\o, \\KStriked\\k}\\P{\\C7;\\Q15;Oblique 15 deg}',
     colors:
-      '{\\C0;By Block}\\P\\C1;Red Text}\\P{\\C2;Green Text}\\P{\\C3;Blue Text}\\P{\\C4;Yellow Text}\\P{\\C5;Magenta Text}\\P{\\C6;Cyan Text}\\P{\\C7;White Text}\\P{\\C256;By Layer}',
+      '{\\C0;By Block}\\P\\C1;Red Text}\\P{\\C2;Yellow Text}\\P{\\C3;Green Text}\\P{\\C4;Cyan Text}\\P{\\C5;Blue Text}\\P{\\C6;Magenta Text}\\P{\\C7;White Text}\\P{\\C256;By Layer}\\P{\\c16761035;Pink (0x0FFC0CB)}',
     formatting:
       '{\\C1;\\W2;\\FSimSun;SimSun Text}\\P{\\C2;\\W0.5;\\FArial;Arial Text}\\P{\\C3;30;\\Faehalf.shx;SHX Text}\\P{\\C4;\\Q1;\\FSimHei;SimHei Text}\\P{\\C5;\\Q0.5;\\FSimKai;SimKai Text}',
     complex:

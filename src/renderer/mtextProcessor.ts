@@ -84,6 +84,8 @@ export class MTextProcessor {
   private _currentOverline: boolean = false;
   private _currentStrikeThrough: boolean = false;
   private _currentObliqueAngle: number = 0;
+  private _currentItalic: boolean = false;
+  private _currentBold: boolean = false;
 
   /**
    * Construct one instance of this class and initialize some properties with default values.
@@ -305,6 +307,23 @@ export class MTextProcessor {
       case 'F':
         if (item.changes.fontFace) {
           this.changeFont(item.changes.fontFace.family);
+          // Handle style and weight for mesh fonts only
+          const fontType = this.fontManager.getFontType(this.currentFont);
+          if (fontType === 'mesh') {
+            this._currentItalic = item.changes.fontFace.style === 'Italic';
+            this._currentBold = (item.changes.fontFace.weight || 400) >= 700;
+            // For mesh, oblique angle is only from style or \Q
+            this._currentObliqueAngle = this.textStyle.obliqueAngle || 0;
+          } else {
+            this._currentItalic = false;
+            this._currentBold = false;
+            // For SHX, simulate italic by setting oblique angle
+            if (item.changes.fontFace.style === 'Italic') {
+              this._currentObliqueAngle = 15;
+            } else {
+              this._currentObliqueAngle = this.textStyle.obliqueAngle || 0;
+            }
+          }
           if (this.currentFont && this.currentFont.includes('.shx')) {
             console.log(`Doesn't support custom fonts: ${this.currentFont}`);
           }
@@ -585,16 +604,28 @@ export class MTextProcessor {
       return;
     }
 
-    const geometry = shape.toGeometry();
+    let geometry = shape.toGeometry();
     geometry.scale(this.currentWidthFactor, 1, 1);
 
-    // Apply oblique/skew transformation if needed
-    if (this.currentObliqueAngle) {
-      // Oblique/skew is typically along X axis by tan(angle)
-      const angleRad = (this.currentObliqueAngle * Math.PI) / 180;
+    // Apply oblique/skew transformation if needed (oblique or italic)
+    let obliqueAngle = this.currentObliqueAngle;
+    if (this._currentItalic) {
+      obliqueAngle += 15; // Simulate italic with a 15 degree skew
+    }
+    if (obliqueAngle) {
+      const angleRad = (obliqueAngle * Math.PI) / 180;
       const skewMatrix = new THREE.Matrix4();
       skewMatrix.set(1, Math.tan(angleRad), 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
       geometry.applyMatrix4(skewMatrix);
+    }
+
+    // Simulate bold for mesh fonts by stroking the geometry
+    const fontType = this.fontManager.getFontType(this.currentFont);
+    if (this._currentBold && fontType === 'mesh') {
+      // Expand geometry slightly to simulate bold
+      // This is a simple approach: scale up slightly from the center
+      const boldScale = 1.06; // 6% wider
+      geometry.scale(boldScale, boldScale, 1);
     }
 
     if (this.hOffset > (this.maxWidth || Infinity)) {

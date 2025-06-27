@@ -556,7 +556,7 @@ export class MTextProcessor {
         const subscriptGeometries: THREE.BufferGeometry[] = [];
         const subscriptLineGeometries: THREE.BufferGeometry[] = [];
         this._hOffset = currentHOffset;
-        this._vOffset = currentVOffset - currentFontSize * 0.3;
+        this._vOffset = currentVOffset - currentFontSize * 0.6;
         for (let i = 0; i < denominator.length; i++) {
           this.processChar(denominator[i], subscriptGeometries, subscriptLineGeometries);
         }
@@ -707,7 +707,7 @@ export class MTextProcessor {
     }
     if (this._currentContext.strikeThrough) {
       const strikeGeom = new THREE.BufferGeometry();
-      const strikeY = charY + charHeight / 2;
+      const strikeY = charY + charHeight / 2 - charHeight * 0.2;
       strikeGeom.setAttribute(
         'position',
         new THREE.BufferAttribute(

@@ -57,28 +57,123 @@ export interface MTextFormatOptions {
   removeFontExtension: boolean;
 }
 
-// Add Context class definition
+/**
+ * Represents the current formatting context for text rendering.
+ * This class maintains the state of various text formatting properties
+ * such as font, color, size, and styling options that are applied
+ * to characters during text processing.
+ */
 class Context {
+  /**
+   * The current font family name in lowercase.
+   * This determines which font file is used for character rendering.
+   */
   font: string = '';
+
+  /**
+   * Scale factor applied to the font height.
+   * This is typically calculated based on the font type and is used
+   * to normalize font sizes across different font formats.
+   */
   fontScaleFactor: number = 1;
+
+  /**
+   * The current font size in drawing units.
+   * This represents the height of the font and affects the overall
+   * size of rendered characters.
+   */
   fontSize: number = 1;
+
+  /**
+   * Additional scale factor applied to the font size.
+   * This allows for dynamic font size adjustments during text processing,
+   * such as for superscript/subscript rendering.
+   */
   fontSizeScaleFactor: number = 1;
+
+  /**
+   * The current text color as a hexadecimal value.
+   * Default is white (0xffffff) and can be changed through formatting commands.
+   */
   color: number = 0xffffff;
+
+  /**
+   * Whether the current text should be underlined.
+   * When true, an underline line is rendered below the text.
+   */
   underline: boolean = false;
+
+  /**
+   * Whether the current text should have an overline.
+   * When true, a line is rendered above the text.
+   */
   overline: boolean = false;
+
+  /**
+   * Whether the current text should have a strikethrough line.
+   * When true, a line is rendered through the middle of the text.
+   */
   strikeThrough: boolean = false;
+
+  /**
+   * The oblique angle in degrees for text skewing.
+   * This creates an italic-like effect by skewing the text at the specified angle.
+   * Default is 0 (no skewing).
+   */
   obliqueAngle: number = 0;
+
+  /**
+   * Whether the current text should be rendered in italic style.
+   * This is primarily used for mesh fonts and affects font selection.
+   */
   italic: boolean = false;
+
+  /**
+   * Whether the current text should be rendered in bold style.
+   * This is primarily used for mesh fonts and affects font selection.
+   */
   bold: boolean = false;
+
+  /**
+   * Scale factor for character width.
+   * This allows horizontal stretching or compression of characters.
+   * Default is 1 (normal width).
+   */
   widthFactor: number = 1;
+
+  /**
+   * The space between two characters (tracking). The meaning of this value is as follows:
+   * - 1: no extra spacing (default tracking)
+   * - 1.2: increases spacing by 20% of the text height
+   * - 0.8: decreases spacing by 20% of the text height
+   */
   wordSpace: number = 1;
+
+  /**
+   * The width of a space character for the current font and size.
+   * This is calculated based on the font type and current font size.
+   */
   blankWidth: number = 0;
+
+  /**
+   * The horizontal alignment for the current text line.
+   * This determines how text is positioned within the available width.
+   */
   horizontalAlignment: MTextParagraphAlignment = MTextParagraphAlignment.LEFT;
 
+  /**
+   * Creates a new Context instance with optional initial values.
+   * @param init - Partial object containing initial values for context properties
+   */
   constructor(init?: Partial<Context>) {
     Object.assign(this, init);
   }
 
+  /**
+   * Creates a deep copy of the current context.
+   * This is useful for saving state before applying formatting changes.
+   * @returns A new Context instance with identical property values
+   */
   clone(): Context {
     return new Context({ ...this });
   }
@@ -270,7 +365,10 @@ export class MTextProcessor {
   }
 
   /**
-   * The current space setting between two characters
+   * The current space setting between two characters. The meaning of this value is as follows.
+   * - 1: no extra spacing (default tracking)
+   * - 1.2: increases spacing by 20% of the text height
+   * - 0.8: decreases spacing by 20% of the text height
    */
   get currentWordSpace() {
     return this._currentContext.wordSpace;
@@ -386,7 +484,11 @@ export class MTextProcessor {
         break;
       case 'T':
         if (item.changes.charTrackingFactor) {
-          this._currentContext.wordSpace = item.changes.charTrackingFactor.value;
+          if (item.changes.charTrackingFactor.isRelative) {
+            this._currentContext.wordSpace = item.changes.charTrackingFactor.value + 1;
+          } else {
+            this._currentContext.wordSpace = item.changes.charTrackingFactor.value;
+          }
         }
         break;
       case 'q':

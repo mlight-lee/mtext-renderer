@@ -551,13 +551,16 @@ export class MTextProcessor {
       } else if (token.type === TokenType.PROPERTIES_CHANGED) {
         const item = token.data as ChangedProperties;
         if (item.command === undefined) {
-          // Restore previous context
+          // Restore previous context when exiting a formatting group
           if (this._contextStack.length > 0) {
             this._currentContext = this._contextStack.pop()!;
           }
         } else {
-          // Push current context before applying new formatting
-          this._contextStack.push(this._currentContext.clone());
+          // Only push context to stack if this is the first formatting command in a group
+          // We can detect this by checking if the context stack is empty or if we haven't pushed yet
+          if (this._contextStack.length === 0) {
+            this._contextStack.push(this._currentContext.clone());
+          }
           this.processFormat(item);
         }
         this.processGeometries(geometries, lineGeometries, group);

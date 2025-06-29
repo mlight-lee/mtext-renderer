@@ -4,7 +4,6 @@ import { MText } from '../src/renderer/mtext';
 import { FontManager } from '../src/font';
 import { StyleManager } from '../src/renderer/styleManager';
 import { DefaultFontLoader } from '../src/font/defaultFontLoader';
-import { getFonts } from '@mlightcad/mtext-parser';
 
 class MTextRendererExample {
   private scene: THREE.Scene;
@@ -179,7 +178,7 @@ class MTextRendererExample {
           this.mtextInput.value = content;
 
           // Get required fonts from the MText content
-          const requiredFonts = Array.from(getFonts(content, true));
+          const requiredFonts = Array.from(MText.getFonts(content, true));
           if (requiredFonts.length > 0) {
             try {
               // Show loading status

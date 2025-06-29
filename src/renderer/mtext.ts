@@ -17,6 +17,7 @@ import {
   MTextLineAlignment,
   MTextParagraphAlignment,
   MTextParser,
+  getFonts,
 } from '@mlightcad/mtext-parser';
 
 const tempPoint = /*@__PURE__*/ new THREE.Vector3();
@@ -45,6 +46,25 @@ export class MText extends THREE.Object3D {
   private _box: THREE.Box3;
   /** Array of bounding boxes for individual text elements */
   private _boxes: THREE.Box3[];
+
+  /**
+   * Extracts all unique font names used in an MText string.
+   * This function searches for font commands in the format \f{fontname}| or \f{fontname}; and returns a set of unique font names.
+   * Font names are converted to lowercase to ensure case-insensitive uniqueness.
+   *
+   * @param mtext - The MText string to analyze for font names
+   * @param removeExtension - Whether to remove font file extensions (e.g., .ttf, .shx) from font names. Defaults to false.
+   * @returns A Set containing all unique font names found in the MText string, converted to lowercase
+   * @example
+   * ```ts
+   * const mtext = "\\fArial.ttf|Hello\\fTimes New Roman.otf|World";
+   * const fonts = getFonts(mtext, true);
+   * // Returns: Set(2) { "arial", "times new roman" }
+   * ```
+   */
+  static getFonts(mtext: string, removeExtension: boolean = false) {
+    return getFonts(mtext, removeExtension);
+  }
 
   /**
    * Creates a new instance of MText.

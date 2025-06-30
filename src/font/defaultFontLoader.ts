@@ -1,5 +1,5 @@
 import { FontManager } from './fontManager';
-import { FontInfo, FontLoader } from './fontLoader';
+import { FontInfo, FontLoader, FontLoadStatus } from './fontLoader';
 
 /**
  * Default implementation of the FontLoader interface.
@@ -50,28 +50,64 @@ export class DefaultFontLoader implements FontLoader {
   }
 
   /**
-   * Loads the specified fonts into the system.
-   * If no font names are provided, loads all available fonts.
+   * Loads the specified fonts into the system. If one font is already loaded,
+   * the font will not be loaded again. If no font names are provided, just loads
+   * all available fonts information (not fonts).
    * @param fontNames - Array of font names to load
    * @returns Promise that resolves to an array of FontLoadStatus objects
    */
   async load(fontNames: string[]) {
     if (fontNames.length == 0) {
       await this.getAvaiableFonts();
+      return [];
     }
 
     const urls: string[] = [];
+    const alreadyLoadedStatuses: FontLoadStatus[] = [];
+    const fontNameToUrl: Record<string, string> = {};
+
+    // Build a map for quick lookup
+    this._avaiableFonts.forEach((font) => {
+      font.name.forEach((name) => {
+        fontNameToUrl[name.toLowerCase()] = font.url;
+      });
+    });
+
     fontNames.forEach((font) => {
       const lowerCaseFontName = font.toLowerCase();
-      const result = this._avaiableFonts.find((item: FontInfo) => {
-        return (
-          item.name.findIndex((name: string) => {
-            return name.toLowerCase() === lowerCaseFontName;
-          }) >= 0
-        );
-      });
-      if (result) urls.push(result.url);
+      const url = fontNameToUrl[lowerCaseFontName];
+      if (url) {
+        if (FontManager.instance.isFontLoaded(lowerCaseFontName)) {
+          alreadyLoadedStatuses.push({
+            fontName: lowerCaseFontName,
+            url,
+            status: true,
+          });
+        } else {
+          urls.push(url);
+        }
+      }
     });
-    return await FontManager.instance.loadFonts(urls);
+
+    let newlyLoadedStatuses: FontLoadStatus[] = [];
+    if (urls.length > 0) {
+      newlyLoadedStatuses = await FontManager.instance.loadFonts(urls);
+    }
+
+    // Merge and return statuses for all requested fonts, preserving order
+    const statusMap: Record<string, FontLoadStatus> = {};
+    [...alreadyLoadedStatuses, ...newlyLoadedStatuses].forEach((s) => {
+      statusMap[s.fontName] = s;
+    });
+    return fontNames.map((font) => {
+      const lowerCaseFontName = font.toLowerCase();
+      return (
+        statusMap[lowerCaseFontName] || {
+          fontName: lowerCaseFontName,
+          url: fontNameToUrl[lowerCaseFontName] || '',
+          status: false,
+        }
+      );
+    });
   }
 }

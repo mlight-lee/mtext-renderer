@@ -198,6 +198,15 @@ export class FontManager {
   }
 
   /**
+   * Checks if a font is already loaded in the system
+   * @param fontName - The name of the font to check
+   * @returns True if the font is loaded, false otherwise
+   */
+  isFontLoaded(fontName: string): boolean {
+    return this.fontMap.has(fontName.toLowerCase());
+  }
+
+  /**
    * Records a font that was requested but not found
    * @param fontName - The name of the font that was not found
    */

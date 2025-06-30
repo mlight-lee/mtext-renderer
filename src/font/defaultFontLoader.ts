@@ -101,11 +101,13 @@ export class DefaultFontLoader implements FontLoader {
     });
     return fontNames.map((font) => {
       const lowerCaseFontName = font.toLowerCase();
-      return statusMap[lowerCaseFontName] || {
-        fontName: lowerCaseFontName,
-        url: fontNameToUrl[lowerCaseFontName] || '',
-        status: false,
-      };
+      return (
+        statusMap[lowerCaseFontName] || {
+          fontName: lowerCaseFontName,
+          url: fontNameToUrl[lowerCaseFontName] || '',
+          status: false,
+        }
+      );
     });
   }
 }

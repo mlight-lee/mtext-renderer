@@ -61,6 +61,7 @@ class MTextRendererExample {
     this.camera.position.z = 5;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(width, height);
     renderArea.appendChild(this.renderer.domElement);
 

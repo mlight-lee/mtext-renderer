@@ -156,12 +156,6 @@ class Context {
   blankWidth: number = 0;
 
   /**
-   * The horizontal alignment for the current text line.
-   * This determines how text is positioned within the available width.
-   */
-  horizontalAlignment: MTextParagraphAlignment = MTextParagraphAlignment.LEFT;
-
-  /**
    * Creates a new Context instance with optional initial values.
    * @param init - Partial object containing initial values for context properties
    */
@@ -195,6 +189,16 @@ export class MTextProcessor {
   private _contextStack: Context[] = [];
   private _currentContext: Context;
   private _maxFontSize: number = 0;
+  /**
+   * The current horizontal alignment for the paragraph.
+   *
+   * In AutoCAD MText, paragraph-level formatting commands (such as \pqr, \pql, \pqc)
+   * persist for the entire paragraph and are not scoped to inline formatting groups ({} blocks).
+   * Only character-level formatting (font, bold, italic, color, etc.) is scoped to {} and managed via Context.
+   * Therefore, paragraph alignment is maintained at the MTextProcessor level and not in Context,
+   * so it persists until explicitly changed by another paragraph alignment command.
+   */
+  private _currentHorizontalAlignment: MTextParagraphAlignment;
 
   /**
    * Construct one instance of this class and initialize some properties with default values.
@@ -237,9 +241,9 @@ export class MTextProcessor {
         this.textStyle.font.toLowerCase(),
         options.fontSize
       ),
-      horizontalAlignment: options.horizontalAlignment,
     });
     this._maxFontSize = 0;
+    this._currentHorizontalAlignment = options.horizontalAlignment;
     this.initLineParams();
   }
 
@@ -320,7 +324,7 @@ export class MTextProcessor {
    * The current horizontal alignment of one text line
    */
   get currentHorizontalAlignment() {
-    return this._currentContext.horizontalAlignment;
+    return this._currentHorizontalAlignment;
   }
 
   /**
@@ -491,9 +495,9 @@ export class MTextProcessor {
           }
         }
         break;
-      case 'q':
+      case 'p':
         if (item.changes.paragraph && item.changes.paragraph.align) {
-          this._currentContext.horizontalAlignment = item.changes.paragraph.align;
+          this._currentHorizontalAlignment = item.changes.paragraph.align;
         }
         break;
       case 'L':
@@ -558,7 +562,7 @@ export class MTextProcessor {
         } else {
           // Only push context to stack if this is the first formatting command in a group
           // We can detect this by checking if the context stack is empty or if we haven't pushed yet
-          if (this._contextStack.length === 0) {
+          if (item.depth > 0) {
             this._contextStack.push(this._currentContext.clone());
           }
           this.processFormat(item);
@@ -573,6 +577,7 @@ export class MTextProcessor {
     if (geometries.length > 0 || lineGeometries.length > 0) {
       this.processGeometries(geometries, lineGeometries, group);
     }
+    this.processLastLine();
     return group;
   }
 
@@ -584,6 +589,7 @@ export class MTextProcessor {
     if (geometries.length > 0 || lineGeometries.length > 0) {
       const object = this.toThreeObject(geometries, lineGeometries);
       group.add(object);
+      this._currentLineObjects.push(object);
       geometries.length = 0;
       lineGeometries.length = 0;
     }
@@ -825,7 +831,7 @@ export class MTextProcessor {
     }
   }
 
-  processLastLine() {
+  private processLastLine() {
     this.processAlignment();
   }
 

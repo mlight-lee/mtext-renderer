@@ -34,6 +34,8 @@ class MTextRendererExample {
     font: '{\\C1;\\W2;\\FSimSun;SimSun Text}\\P{\\C2;\\W0.5;\\FArial;Arial Text}\\P{\\C3;30;\\Faehalf.shx;SHX Text}\\P{\\C4;\\Q1;\\FSimHei;SimHei Text}\\P{\\C5;\\Q0.5;\\FSimKai;SimKai Text}',
     stacking:
       '{\\C1;Basic Fractions:}\\P{\\C2;The value is \\S1/2; and \\S3/4; of the total.}\\P{\\C3;Stacked Fractions:}\\P{\\C4;\\S1 2/3 4; represents \\Sx^ y; in the equation \\S1#2;.}\\P{\\C5;Complex Fractions:}\\P{\\C6;The result \\S1/2/3; is between \\S1^ 2^ 3; and \\S1#2#3;.}\\P{\\C7;Subscript Examples:}\\P{\\C8;H\\S^ 2;O (Water)}\\P{\\C9;CO\\S^ 2; (Carbon Dioxide)}\\P{\\C10;x\\S^ 2; + y\\S^ 2;}\\P{\\C11;Superscript Examples:}\\P{\\C12;E = mc\\S2^ ; (Energy)}\\P{\\C13;x\\S2^ ; + y\\S2^ ; = r\\S2^ ; (Circle)}\\P{\\C14;Combined Examples:}\\P{\\C15;H\\S^ 2;O\\S2^ ; (Hydrogen Peroxide)}\\P{\\C16;Fe\\S^ 2;+\\S3^ ; (Iron Ion)}',
+    alignment:
+      '{\\pql;Left aligned paragraph.}\\P{\\pqc;Center aligned paragraph.}\\P{\\pqr;Right aligned paragraph.}\\P{\\pqc;Center again.}\\P{\\pql;Back to left.}',
   };
 
   constructor() {
@@ -76,6 +78,7 @@ class MTextRendererExample {
 
     // Initialize managers and loader
     this.fontManager = FontManager.instance;
+    this.fontManager.defaultFont = 'simkai';
     this.styleManager = new StyleManager();
     this.fontLoader = new DefaultFontLoader();
 
@@ -245,43 +248,120 @@ class MTextRendererExample {
     }
   }
 
-  private createMTextBox(box: THREE.Box3): THREE.LineSegments {
+  /**
+   * Draws a bounding box for the text using the given position, max width, and the height from the box property.
+   * @param box The bounding box of the MText (for height)
+   * @param position The position (THREE.Vector3) of the text box (min corner)
+   * @param maxWidth The maximum width of the text box
+   */
+  private createMTextBox(
+    box: THREE.Box3,
+    position: THREE.Vector3,
+    maxWidth?: number
+  ): THREE.LineSegments {
     // Remove existing box if any
     if (this.mtextBox) {
       this.scene.remove(this.mtextBox);
     }
 
-    // Create box geometry
+    // The min and max y/z come from the box, x is from position and maxWidth
+    const minY = box.min.y;
+    const maxY = box.max.y;
+    const minZ = box.min.z;
+    const maxZ = box.max.z;
+    const minX = position.x;
+    const maxX = maxWidth !== undefined && maxWidth > 0 ? minX + maxWidth : box.max.x;
+
+    const vertices = [
+      // Bottom face
+      minX,
+      minY,
+      minZ,
+      maxX,
+      minY,
+      minZ,
+      maxX,
+      minY,
+      minZ,
+      maxX,
+      maxY,
+      minZ,
+      maxX,
+      maxY,
+      minZ,
+      minX,
+      maxY,
+      minZ,
+      minX,
+      maxY,
+      minZ,
+      minX,
+      minY,
+      minZ,
+      // Top face
+      minX,
+      minY,
+      maxZ,
+      maxX,
+      minY,
+      maxZ,
+      maxX,
+      minY,
+      maxZ,
+      maxX,
+      maxY,
+      maxZ,
+      maxX,
+      maxY,
+      maxZ,
+      minX,
+      maxY,
+      maxZ,
+      minX,
+      maxY,
+      maxZ,
+      minX,
+      minY,
+      maxZ,
+      // Sides
+      minX,
+      minY,
+      minZ,
+      minX,
+      minY,
+      maxZ,
+      maxX,
+      minY,
+      minZ,
+      maxX,
+      minY,
+      maxZ,
+      maxX,
+      maxY,
+      minZ,
+      maxX,
+      maxY,
+      maxZ,
+      minX,
+      maxY,
+      minZ,
+      minX,
+      maxY,
+      maxZ,
+    ];
+
     const geometry = new THREE.BufferGeometry();
-    const min = box.min;
-    const max = box.max;
-    const vertices = new Float32Array([
-      min.x,
-      min.y,
-      0, // bottom left
-      max.x,
-      min.y,
-      0, // bottom right
-      max.x,
-      max.y,
-      0, // top right
-      min.x,
-      max.y,
-      0, // top left
-      min.x,
-      min.y,
-      0, // back to bottom left
-    ]);
-    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-
-    // Create line material
-    const material = new THREE.LineBasicMaterial({
-      color: 0x00ff00,
-      linewidth: 1,
-    });
-
-    // Create line segments
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 1 });
     this.mtextBox = new THREE.LineSegments(geometry, material);
+
+    // Apply the same transformation as the MText object
+    if (this.currentMText) {
+      this.mtextBox.position.copy(this.currentMText.position);
+      this.mtextBox.rotation.copy(this.currentMText.rotation);
+      this.mtextBox.scale.copy(this.currentMText.scale);
+    }
+
     return this.mtextBox;
   }
 
@@ -295,7 +375,7 @@ class MTextRendererExample {
     const mtextContent = {
       text: content,
       height: 0.1,
-      width: 0,
+      width: 5.5,
       position: new THREE.Vector3(-3, 2, 0),
     };
 
@@ -325,7 +405,11 @@ class MTextRendererExample {
       this.currentMText.box &&
       !this.currentMText.box.isEmpty()
     ) {
-      const box = this.createMTextBox(this.currentMText.box);
+      const box = this.createMTextBox(
+        this.currentMText.box,
+        mtextContent.position,
+        mtextContent.width
+      );
       this.scene.add(box);
     }
   }

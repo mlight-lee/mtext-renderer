@@ -271,17 +271,15 @@ export class MText extends THREE.Object3D {
     context.widthFactor = { value: mtextData.widthFactor ?? 1.0, isRelative: true };
     context.align = verticalAlignment;
     context.paragraph.align = horizontalAlignment;
-    const parser = new MTextParser(mtextData.text, context, true);
-    const tokens = parser.parse();
-
     const textLine = new MTextProcessor(
       style,
       this.styleManager,
       this.fontManager,
       textLineFormatOptions
     );
+    const parser = new MTextParser(mtextData.text, context, true);
+    const tokens = parser.parse();
     const object = textLine.processText(tokens);
-    textLine.processLastLine();
     return {
       object: object,
       height: textLine.totalHeight,

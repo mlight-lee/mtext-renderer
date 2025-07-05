@@ -199,6 +199,10 @@ export class MTextProcessor {
    * so it persists until explicitly changed by another paragraph alignment command.
    */
   private _currentHorizontalAlignment: MTextParagraphAlignment;
+  // Paragraph properties
+  private _currentIndent: number = 0;
+  private _currentLeftMargin: number = 0;
+  private _currentRightMargin: number = 0;
 
   /**
    * Construct one instance of this class and initialize some properties with default values.
@@ -222,7 +226,6 @@ export class MTextProcessor {
     this._vOffset = 0;
     this._lineCount = 1;
     this._currentLineObjects = [];
-    // Initialize context
     this._currentContext = new Context({
       font: this.textStyle.font.toLowerCase(),
       fontScaleFactor: this.fontManager.getFontScaleFactor(this.textStyle.font.toLowerCase()),
@@ -244,6 +247,10 @@ export class MTextProcessor {
     });
     this._maxFontSize = 0;
     this._currentHorizontalAlignment = options.horizontalAlignment;
+    // Initialize paragraph properties (as factors, so initial value is 0)
+    this._currentIndent = 0;
+    this._currentLeftMargin = 0;
+    this._currentRightMargin = 0;
     this.initLineParams();
   }
 
@@ -328,26 +335,10 @@ export class MTextProcessor {
   }
 
   /**
-   * Scale factor of current font height. The scale factor isn't set by users in text editor.
-   * It is one scale factor binded to font. For ttf or woff fonts, it is calculated by certain
-   * algorithm. For shx font, it is alway equal to 1.
-   */
-  get currentFontScaleFactor() {
-    return this._currentContext.fontScaleFactor;
-  }
-
-  /**
    * Font size of current character
    */
   get currentFontSize() {
     return this._currentContext.fontSize;
-  }
-
-  /**
-   * Font size scale factor of current character
-   */
-  get currentFontSizeScaleFactor() {
-    return this._currentContext.fontSizeScaleFactor;
   }
 
   /**
@@ -386,13 +377,6 @@ export class MTextProcessor {
   }
 
   /**
-   * The current text color
-   */
-  get currentColor() {
-    return this._currentContext.color;
-  }
-
-  /**
    * All of THREE.js objects in current line. It contains objects in all of sections of this line.
    */
   get currentLineObjects() {
@@ -419,11 +403,21 @@ export class MTextProcessor {
     this._vOffset = value;
   }
 
-  /**
-   * Oblique angle of current character
-   */
-  get currentObliqueAngle() {
-    return this._currentContext.obliqueAngle;
+  get currentIndent() {
+    return this._currentIndent;
+  }
+
+  get currentLeftMargin() {
+    return this._currentLeftMargin;
+  }
+
+  get currentRightMargin() {
+    return this._currentRightMargin;
+  }
+
+  get maxLineWidth() {
+    // The actual usable width for text in a line, considering margins
+    return this.maxWidth - this._currentLeftMargin - this._currentRightMargin;
   }
 
   /**
@@ -496,8 +490,20 @@ export class MTextProcessor {
         }
         break;
       case 'p':
-        if (item.changes.paragraph && item.changes.paragraph.align) {
-          this._currentHorizontalAlignment = item.changes.paragraph.align;
+        if (item.changes.paragraph) {
+          if (item.changes.paragraph.align) {
+            this._currentHorizontalAlignment = item.changes.paragraph.align;
+          }
+          if (typeof item.changes.paragraph.indent === 'number') {
+            this._currentIndent = item.changes.paragraph.indent * this.defaultFontSize;
+            this._hOffset += this._currentIndent;
+          }
+          if (typeof item.changes.paragraph.left === 'number') {
+            this._currentLeftMargin = item.changes.paragraph.left * this.defaultFontSize;
+          }
+          if (typeof item.changes.paragraph.right === 'number') {
+            this._currentRightMargin = item.changes.paragraph.right * this.defaultFontSize;
+          }
         }
         break;
       case 'L':
@@ -530,6 +536,34 @@ export class MTextProcessor {
   }
 
   /**
+   * Reset paragraph properties to their default values from options.
+   */
+  private resetParagraphProperties() {
+    this._currentIndent = 0;
+    this._currentLeftMargin = 0;
+    this._currentRightMargin = 0;
+    this._currentHorizontalAlignment = this._options.horizontalAlignment;
+  }
+
+  /**
+   * Start a new paragraph by processing current geometries, resetting paragraph properties,
+   * and starting a new line with indent applied.
+   * @param geometries Current text geometries to process
+   * @param lineGeometries Current line geometries to process
+   * @param group The group to add processed geometries to
+   */
+  private startNewParagraph(
+    geometries: THREE.BufferGeometry[],
+    lineGeometries: THREE.BufferGeometry[],
+    group: THREE.Group
+  ) {
+    this.processGeometries(geometries, lineGeometries, group);
+    this.startNewLine(); // Mark as first line of paragraph, apply indent
+    // Reset paragraph properties to defaults at the start of a new paragraph
+    this.resetParagraphProperties();
+  }
+
+  /**
    * Render the specified texts
    * @param item Input texts to render
    */
@@ -540,8 +574,7 @@ export class MTextProcessor {
 
     for (const token of tokens) {
       if (token.type === TokenType.NEW_PARAGRAPH) {
-        this.startNewLine();
-        this.processGeometries(geometries, lineGeometries, group);
+        this.startNewParagraph(geometries, lineGeometries, group);
       } else if (token.type === TokenType.WORD) {
         const words = token.data;
         if (Array.isArray(words)) {
@@ -549,10 +582,12 @@ export class MTextProcessor {
         } else if (typeof words === 'string' && words.length > 0) {
           this.processWord(words, geometries, lineGeometries);
         }
-        this.processGeometries(geometries, lineGeometries, group);
       } else if (token.type === TokenType.SPACE) {
         this.processBlank();
       } else if (token.type === TokenType.PROPERTIES_CHANGED) {
+        // FLUSH before changing style: ensures all geometries up to this point use the previous style.
+        // This is critical for correct color/formatting application within a line.
+        this.processGeometries(geometries, lineGeometries, group);
         const item = token.data as ChangedProperties;
         if (item.command === undefined) {
           // Restore previous context when exiting a formatting group
@@ -567,7 +602,6 @@ export class MTextProcessor {
           }
           this.processFormat(item);
         }
-        this.processGeometries(geometries, lineGeometries, group);
       } else if (token.type === TokenType.STACK) {
         this.processStack(token.data as string[], geometries, lineGeometries);
         this.processGeometries(geometries, lineGeometries, group);
@@ -600,6 +634,26 @@ export class MTextProcessor {
     geometries: THREE.BufferGeometry[],
     lineGeometries: THREE.BufferGeometry[]
   ) {
+    // --- Word-level wrapping logic ---
+    // 1. Measure word width
+    let wordWidth = 0;
+    for (let i = 0; i < word.length; i++) {
+      const shape = this.getCharShape(word[i]);
+      if (shape) {
+        if (this.currentHorizontalAlignment == MTextParagraphAlignment.DISTRIBUTED) {
+          wordWidth += shape.width * this.currentWidthFactor;
+        } else {
+          wordWidth += shape.width * this.currentWordSpace * this.currentWidthFactor;
+        }
+      } else {
+        wordWidth += this._currentContext.blankWidth;
+      }
+    }
+    // 2. If word would overflow, start a new line first (no indent for wrapped lines)
+    if (this.hOffset + wordWidth > (this.maxLineWidth || Infinity)) {
+      this.startNewLine(); // Do not apply indent for wrapped lines
+    }
+    // 3. Render the word character by character
     for (let i = 0; i < word.length; i++) {
       this.processChar(word[i], geometries, lineGeometries);
     }
@@ -746,7 +800,7 @@ export class MTextProcessor {
     geometry.scale(this.currentWidthFactor, 1, 1);
 
     // Apply oblique/skew transformation if needed (oblique or italic)
-    let obliqueAngle = this.currentObliqueAngle;
+    let obliqueAngle = this._currentContext.obliqueAngle;
     if (this._currentContext.italic) {
       obliqueAngle += 15; // Simulate italic with a 15 degree skew
     }
@@ -766,7 +820,7 @@ export class MTextProcessor {
       geometry.scale(boldScale, boldScale, 1);
     }
 
-    if (this.hOffset > (this.maxWidth || Infinity)) {
+    if (this.hOffset > (this.maxLineWidth || Infinity)) {
       this.startNewLine();
     }
 
@@ -895,12 +949,9 @@ export class MTextProcessor {
     } else {
       this._vOffset -= this.currentLineHeight;
     }
-
     this._lineCount++;
-
     this.processAlignment();
     this._currentLineObjects = [];
-
     if (this._lineCount == 2) {
       this._totalHeight = this.currentMaxFontSize;
     } else {
@@ -939,21 +990,33 @@ export class MTextProcessor {
       const size = bbox.getSize(tempVector);
       switch (this.currentHorizontalAlignment) {
         case MTextParagraphAlignment.LEFT:
+          // Shift to left margin
+          geometries.forEach((g) => g.translate(this._currentLeftMargin - bbox!.min.x, 0, 0));
           break;
         case MTextParagraphAlignment.CENTER:
-          geometries.forEach((g) => g.translate((this.maxWidth - size.x) / 2, 0, 0));
+          geometries.forEach((g) =>
+            g.translate(
+              this._currentLeftMargin + (this.maxLineWidth - size.x) / 2 - bbox!.min.x,
+              0,
+              0
+            )
+          );
           break;
         case MTextParagraphAlignment.RIGHT:
-          geometries.forEach((g) => g.translate(this.maxWidth - size.x, 0, 0));
+          geometries.forEach((g) =>
+            g.translate(this._currentLeftMargin + this.maxLineWidth - size.x - bbox!.min.x, 0, 0)
+          );
           break;
         case MTextParagraphAlignment.DISTRIBUTED:
           if (geometries.length > 1) {
-            const gap = (this.maxWidth - size.x) / (geometries.length - 1);
+            const gap = (this.maxLineWidth - size.x) / (geometries.length - 1);
             for (let k = 1; k < geometries.length; k++) {
               const geometry = geometries[k];
               geometry.translate(gap * k, 0, 0);
             }
           }
+          // Shift to left margin
+          geometries.forEach((g) => g.translate(this._currentLeftMargin - bbox!.min.x, 0, 0));
           break;
         default:
           break;
@@ -986,7 +1049,7 @@ export class MTextProcessor {
     lineGeometries: THREE.BufferGeometry[]
   ) {
     const meshGroup = new THREE.Group();
-    const color = this.currentColor;
+    const color = this._currentContext.color;
 
     // Mesh font (ExtrudeGeometry)
     const meshGeoms = geometries.filter((g) => g instanceof THREE.ExtrudeGeometry);

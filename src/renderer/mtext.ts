@@ -277,7 +277,10 @@ export class MText extends THREE.Object3D {
       this.fontManager,
       textLineFormatOptions
     );
-    const parser = new MTextParser(mtextData.text, context, true);
+    const parser = new MTextParser(mtextData.text, context, {
+      resetParagraphParameters: true,
+      yieldPropertyCommands: true,
+    });
     const tokens = parser.parse();
     const object = textLine.processText(tokens);
     return {

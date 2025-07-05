@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/mtext-renderer",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "AutoCAD MText renderer based on Three.js",
   "type": "module",
   "main": "dist/index.js",
@@ -29,7 +29,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@mlightcad/mtext-parser": "^1.1.7",
+    "@mlightcad/mtext-parser": "^1.1.9",
     "@mlightcad/shx-parser": "^1.0.4",
     "opentype.js": "^1.3.4",
     "idb": "^8.0.3"

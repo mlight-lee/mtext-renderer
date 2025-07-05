@@ -3,6 +3,7 @@ import {
   MTextParagraphAlignment,
   MTextToken,
   TokenType,
+  MTextContext,
 } from '@mlightcad/mtext-parser';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -58,18 +59,11 @@ export interface MTextFormatOptions {
 }
 
 /**
- * Represents the current formatting context for text rendering.
- * This class maintains the state of various text formatting properties
- * such as font, color, size, and styling options that are applied
- * to characters during text processing.
+ * Extended MTextContext for rendering purposes.
+ * This class extends the parser's MTextContext to add rendering-specific properties
+ * while maintaining compatibility with the parser's context structure.
  */
-class Context {
-  /**
-   * The current font family name in lowercase.
-   * This determines which font file is used for character rendering.
-   */
-  font: string = '';
-
+class RenderContext extends MTextContext {
   /**
    * Scale factor applied to the font height.
    * This is typically calculated based on the font type and is used
@@ -92,84 +86,71 @@ class Context {
   fontSizeScaleFactor: number = 1;
 
   /**
-   * The current text color as a hexadecimal value.
-   * Default is white (0xffffff) and can be changed through formatting commands.
-   */
-  color: number = 0xffffff;
-
-  /**
-   * Whether the current text should be underlined.
-   * When true, an underline line is rendered below the text.
-   */
-  underline: boolean = false;
-
-  /**
-   * Whether the current text should have an overline.
-   * When true, a line is rendered above the text.
-   */
-  overline: boolean = false;
-
-  /**
-   * Whether the current text should have a strikethrough line.
-   * When true, a line is rendered through the middle of the text.
-   */
-  strikeThrough: boolean = false;
-
-  /**
-   * The oblique angle in degrees for text skewing.
-   * This creates an italic-like effect by skewing the text at the specified angle.
-   * Default is 0 (no skewing).
-   */
-  obliqueAngle: number = 0;
-
-  /**
-   * Whether the current text should be rendered in italic style.
-   * This is primarily used for mesh fonts and affects font selection.
-   */
-  italic: boolean = false;
-
-  /**
-   * Whether the current text should be rendered in bold style.
-   * This is primarily used for mesh fonts and affects font selection.
-   */
-  bold: boolean = false;
-
-  /**
-   * Scale factor for character width.
-   * This allows horizontal stretching or compression of characters.
-   * Default is 1 (normal width).
-   */
-  widthFactor: number = 1;
-
-  /**
-   * The space between two characters (tracking). The meaning of this value is as follows:
-   * - 1: no extra spacing (default tracking)
-   * - 1.2: increases spacing by 20% of the text height
-   * - 0.8: decreases spacing by 20% of the text height
-   */
-  wordSpace: number = 1;
-
-  /**
    * The width of a space character for the current font and size.
    * This is calculated based on the font type and current font size.
    */
   blankWidth: number = 0;
 
   /**
-   * Creates a new Context instance with optional initial values.
+   * Creates a new RenderContext instance with optional initial values.
    * @param init - Partial object containing initial values for context properties
    */
-  constructor(init?: Partial<Context>) {
-    Object.assign(this, init);
+  constructor(init?: Partial<RenderContext>) {
+    super();
+    if (init) {
+      Object.assign(this, init);
+    }
   }
 
   /**
    * Creates a deep copy of the current context.
    * This is useful for saving state before applying formatting changes.
-   * @returns A new Context instance with identical property values
+   * @returns A new RenderContext instance with identical property values
    */
-  clone(): Context {
-    return new Context({ ...this });
+  clone(): RenderContext {
+    const copy = new RenderContext();
+    // Copy base MTextContext properties
+    copy.continueStroke = this.continueStroke;
+    copy.color = this.color.copy();
+    copy.align = this.align;
+    copy.fontFace = { ...this.fontFace };
+    copy.capHeight = { ...this.capHeight };
+    copy.widthFactor = { ...this.widthFactor };
+    copy.charTrackingFactor = { ...this.charTrackingFactor };
+    copy.oblique = this.oblique;
+    copy.paragraph = { ...this.paragraph };
+
+    // Copy rendering-specific properties
+    copy.fontScaleFactor = this.fontScaleFactor;
+    copy.fontSize = this.fontSize;
+    copy.fontSizeScaleFactor = this.fontSizeScaleFactor;
+    copy.blankWidth = this.blankWidth;
+
+    return copy;
+  }
+
+  /**
+   * Get the current text color as a hexadecimal value for rendering.
+   * @returns The color as a hex number (0xRRGGBB)
+   */
+  getColorAsHex(): number {
+    if (this.color.isRgb && this.color.rgbValue !== null) {
+      return this.color.rgbValue;
+    } else if (this.color.isAci && this.color.aci !== null) {
+      return getColorByIndex(this.color.aci);
+    }
+    return 0xffffff; // Default white
+  }
+
+  /**
+   * Set the color using a hex value for rendering purposes.
+   * @param hexColor - The color as a hex number (0xRRGGBB)
+   */
+  setColorFromHex(hexColor: number): void {
+    const r = (hexColor >> 16) & 0xff;
+    const g = (hexColor >> 8) & 0xff;
+    const b = hexColor & 0xff;
+    this.color.rgb = [r, g, b];
   }
 }
 
@@ -186,8 +167,8 @@ export class MTextProcessor {
   private _vOffset: number;
   private _lineCount: number;
   private _currentLineObjects: THREE.Object3D[];
-  private _contextStack: Context[] = [];
-  private _currentContext: Context;
+  private _contextStack: RenderContext[] = [];
+  private _currentContext: RenderContext;
   private _maxFontSize: number = 0;
   /**
    * The current horizontal alignment for the paragraph.
@@ -226,25 +207,25 @@ export class MTextProcessor {
     this._vOffset = 0;
     this._lineCount = 1;
     this._currentLineObjects = [];
-    this._currentContext = new Context({
-      font: this.textStyle.font.toLowerCase(),
+    this._currentContext = new RenderContext({
       fontScaleFactor: this.fontManager.getFontScaleFactor(this.textStyle.font.toLowerCase()),
       fontSize: options.fontSize,
       fontSizeScaleFactor: 1,
-      color: options.byLayerColor,
-      underline: false,
-      overline: false,
-      strikeThrough: false,
-      obliqueAngle: style.obliqueAngle || 0,
       italic: false,
       bold: false,
-      widthFactor: options.widthFactor,
-      wordSpace: 1,
       blankWidth: this.calculateBlankWidthForFont(
         this.textStyle.font.toLowerCase(),
         options.fontSize
       ),
     });
+    // Set initial color
+    this._currentContext.setColorFromHex(options.byLayerColor);
+    // Set initial font face
+    this._currentContext.fontFace.family = this.textStyle.font.toLowerCase();
+    // Set initial width factor
+    this._currentContext.widthFactor = { value: options.widthFactor, isRelative: true };
+    // Set initial oblique angle
+    this._currentContext.oblique = style.obliqueAngle || 0;
     this._maxFontSize = 0;
     this._currentHorizontalAlignment = options.horizontalAlignment;
     // Initialize paragraph properties (as factors, so initial value is 0)
@@ -324,7 +305,7 @@ export class MTextProcessor {
    * Font name of current character
    */
   get currentFont() {
-    return this._currentContext.font;
+    return this._currentContext.fontFace.family;
   }
 
   /**
@@ -366,14 +347,14 @@ export class MTextProcessor {
    * - 0.8: decreases spacing by 20% of the text height
    */
   get currentWordSpace() {
-    return this._currentContext.wordSpace;
+    return this._currentContext.charTrackingFactor.value;
   }
 
   /**
    * The current scale factor of character width
    */
   get currentWidthFactor() {
-    return this._currentContext.widthFactor;
+    return this._currentContext.widthFactor.value;
   }
 
   /**
@@ -431,18 +412,18 @@ export class MTextProcessor {
         if (item.changes.fontFace) {
           this.changeFont(item.changes.fontFace.family);
           // Handle style and weight for mesh fonts only
-          const fontType = this.fontManager.getFontType(this._currentContext.font);
+          const fontType = this.fontManager.getFontType(this._currentContext.fontFace.family);
           if (fontType === 'mesh') {
             this._currentContext.italic = item.changes.fontFace.style === 'Italic';
             this._currentContext.bold = (item.changes.fontFace.weight || 400) >= 700;
-            this._currentContext.obliqueAngle = this.textStyle.obliqueAngle || 0;
+            this._currentContext.oblique = this.textStyle.obliqueAngle || 0;
           } else {
             this._currentContext.italic = false;
             this._currentContext.bold = false;
             if (item.changes.fontFace.style === 'Italic') {
-              this._currentContext.obliqueAngle = 15;
+              this._currentContext.oblique = 15;
             } else {
-              this._currentContext.obliqueAngle = this.textStyle.obliqueAngle || 0;
+              this._currentContext.oblique = this.textStyle.obliqueAngle || 0;
             }
           }
           break;
@@ -451,23 +432,28 @@ export class MTextProcessor {
       case 'C':
         if (item.changes.aci) {
           if (item.changes.aci === 0) {
-            this._currentContext.color = this._options.byBlockColor;
+            this._currentContext.setColorFromHex(this._options.byBlockColor);
           } else if (item.changes.aci === 256) {
-            this._currentContext.color = this._options.byLayerColor;
+            this._currentContext.setColorFromHex(this._options.byLayerColor);
           } else {
-            this._currentContext.color = getColorByIndex(item.changes.aci);
+            this._currentContext.color.aci = item.changes.aci;
           }
         } else if (item.changes.rgb) {
-          this._currentContext.color =
-            (item.changes.rgb[0] << 16) + (item.changes.rgb[1] << 8) + item.changes.rgb[2];
+          this._currentContext.color.rgb = item.changes.rgb;
         }
         break;
       case 'W':
         if (item.changes.widthFactor) {
           if (item.changes.widthFactor.isRelative) {
-            this._currentContext.widthFactor = item.changes.widthFactor.value * this.maxWidth;
+            this._currentContext.widthFactor = {
+              value: item.changes.widthFactor.value * this.maxWidth,
+              isRelative: false,
+            };
           } else {
-            this._currentContext.widthFactor = item.changes.widthFactor.value * 0.93;
+            this._currentContext.widthFactor = {
+              value: item.changes.widthFactor.value * 0.93,
+              isRelative: false,
+            };
           }
         }
         break;
@@ -483,9 +469,15 @@ export class MTextProcessor {
       case 'T':
         if (item.changes.charTrackingFactor) {
           if (item.changes.charTrackingFactor.isRelative) {
-            this._currentContext.wordSpace = item.changes.charTrackingFactor.value + 1;
+            this._currentContext.charTrackingFactor = {
+              value: item.changes.charTrackingFactor.value + 1,
+              isRelative: false,
+            };
           } else {
-            this._currentContext.wordSpace = item.changes.charTrackingFactor.value;
+            this._currentContext.charTrackingFactor = {
+              value: item.changes.charTrackingFactor.value,
+              isRelative: false,
+            };
           }
         }
         break;
@@ -526,7 +518,7 @@ export class MTextProcessor {
         break;
       case 'Q':
         if (item.changes.oblique !== undefined) {
-          this._currentContext.obliqueAngle = item.changes.oblique;
+          this._currentContext.oblique = item.changes.oblique;
         }
         break;
       default:
@@ -669,13 +661,13 @@ export class MTextProcessor {
     // Store current position and state
     const currentHOffset = this._hOffset;
     const currentVOffset = this._vOffset;
-    const currentWordSpace = this._currentContext.wordSpace;
+    const currentWordSpace = this._currentContext.charTrackingFactor.value;
     const currentFontSize = this._currentContext.fontSize;
     const currentFontSizeScaleFactor = this._currentContext.fontSizeScaleFactor;
 
     // First pass: calculate widths
     this._hOffset = currentHOffset;
-    this._currentContext.wordSpace = 1;
+    this._currentContext.charTrackingFactor = { value: 1, isRelative: false };
     let numeratorWidth = 0;
     for (let i = 0; i < numerator.length; i++) {
       const shape = this.getCharShape(numerator[i]);
@@ -778,7 +770,7 @@ export class MTextProcessor {
 
     // Restore state
     this._vOffset = currentVOffset;
-    this._currentContext.wordSpace = currentWordSpace;
+    this._currentContext.charTrackingFactor = { value: currentWordSpace, isRelative: false };
   }
 
   private processBlank() {
@@ -800,7 +792,7 @@ export class MTextProcessor {
     geometry.scale(this.currentWidthFactor, 1, 1);
 
     // Apply oblique/skew transformation if needed (oblique or italic)
-    let obliqueAngle = this._currentContext.obliqueAngle;
+    let obliqueAngle = this._currentContext.oblique;
     if (this._currentContext.italic) {
       obliqueAngle += 15; // Simulate italic with a 15 degree skew
     }
@@ -898,9 +890,9 @@ export class MTextProcessor {
     if (this._options.removeFontExtension) {
       processedFontName = fontName.replace(/\.(ttf|otf|woff|shx)$/, '');
     }
-    this._currentContext.font = this.fontManager.findAndReplaceFont(processedFontName);
+    this._currentContext.fontFace.family = this.fontManager.findAndReplaceFont(processedFontName);
     this._currentContext.blankWidth = this.calculateBlankWidthForFont(
-      this._currentContext.font,
+      this._currentContext.fontFace.family,
       this._currentContext.fontSize
     );
     this.calcuateLineParams();
@@ -1049,7 +1041,7 @@ export class MTextProcessor {
     lineGeometries: THREE.BufferGeometry[]
   ) {
     const meshGroup = new THREE.Group();
-    const color = this._currentContext.color;
+    const color = this._currentContext.getColorAsHex();
 
     // Mesh font (ExtrudeGeometry)
     const meshGeoms = geometries.filter((g) => g instanceof THREE.ExtrudeGeometry);

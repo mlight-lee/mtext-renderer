@@ -219,7 +219,7 @@ export class MTextProcessor {
       ),
     });
     // Set initial color
-    this._currentContext.setColorFromHex(options.byLayerColor);
+    this._currentContext.setColorFromHex(style.color);
     // Set initial font face
     this._currentContext.fontFace.family = this.textStyle.font.toLowerCase();
     // Set initial width factor

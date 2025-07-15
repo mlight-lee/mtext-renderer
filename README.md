@@ -232,6 +232,20 @@ const mtext = new MText(
 scene.add(mtext);
 ```
 
+If all of fonts or certain fonts are not needed any more after rendering, you can call method `release` of class `FontManager` to free memory occupied by them. Based on testing, one Chinese mesh font file may take 40M memory.
+
+```typescript
+// ---
+// FontManager: Releasing Fonts
+// ---
+// To release all loaded fonts and free memory:
+fontManager.release();
+
+// To release a specific font by name (e.g., 'simsun'):
+fontManager.release('simsun');
+// Returns true if the font was found and released, false otherwise.
+```
+
 ## License
 
 MIT

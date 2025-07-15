@@ -289,9 +289,23 @@ export class FontManager {
   }
 
   /**
-   * Releases all loaded fonts and clears the font map
+   * Releases loaded fonts from memory.
+   *
+   * - If no argument is provided, all loaded fonts are released and the font map is cleared.
+   * - If a font name is provided, only that specific font is released from the font map.
+   *
+   * This is useful for freeing up memory, especially when working with large font files (e.g., Chinese mesh fonts).
+   * Notes: Based on testing, one Chinese mesh font file may take 40M memory.
+   *
+   * @param fontToRelease - (Optional) The name of the font to release. If omitted, all fonts are released.
+   * @returns `true` if the operation succeeded (all fonts released or the specified font was found and deleted), `false` if the specified font was not found.
    */
-  release() {
-    this.fontMap.clear();
+  release(fontToRelease?: string) {
+    if (fontToRelease == null) {
+      this.fontMap.clear();
+      return true;
+    } else {
+      return this.fontMap.delete(fontToRelease);
+    }
   }
 }

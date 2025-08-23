@@ -74,7 +74,7 @@ export class ShxFont extends BaseFont {
     const fontType = this.font.fontData.header.fontType;
     if (fontType === ShxFontType.BIGFONT) {
       // TODO: Get code from bigfont
-      throw new Error('Bigfont is not supported yet');
+      throw new Error(`Can't get font glyph for '${char}' because big font is not supported yet!`);
     }
     return char.charCodeAt(0);
   }

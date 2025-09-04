@@ -19,6 +19,16 @@ export class ShxFont extends BaseFont {
     this.data = this.font.fontData;
   }
 
+  /**
+   * Return true if this font contains glyph of the specified character. Otherwise, return false.
+   * @param char - The character to check
+   * @returns True if this font contains glyph of the specified character. Otherwise, return false.
+   */
+  hasChar(char: string): boolean {
+    const code = char.charCodeAt(0);
+    return this.font.hasChar(code);
+  }
+
   generateShapes(text: string, size: number) {
     const shapes: ShxTextShape[] = [];
     let hOffset = 0.0;
@@ -59,7 +69,7 @@ export class ShxFont extends BaseFont {
   public getCharShape(char: string, size: number) {
     let code = this.getCode(char);
     const shape = this.font.getCharShape(code, size);
-    return shape ? new ShxTextShape(char, shape) : undefined;
+    return shape ? new ShxTextShape(char, size, shape, this) : undefined;
   }
 
   /**

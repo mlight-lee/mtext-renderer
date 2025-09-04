@@ -36,30 +36,34 @@ export class MeshTextShape extends BaseTextShape {
    * @returns A THREE.js BufferGeometry representing the text shape
    */
   toGeometry(): THREE.BufferGeometry {
-    // Use NormalComputationToggle to disable generating 'normal' data in returned geometry
-    // to save computation cost because rendering font characters don't need it.
-    return NormalComputationToggle.runWithoutNormals<THREE.BufferGeometry>(() => {
-      const geometry = new TextGeometry(this.char, {
-        font: this.font.font,
-        depth: 0,
-        size: this.fontSize,
-        curveSegments: 3, // change this to increase/decrease display precision
-        bevelSegments: 3,
-        // Pass dummy uv generator to save computation cost because rendering font characters
-        // always use color material and don't need 'uv' data.
-        UVGenerator: {
-          generateTopUV: () => [_tmp, _tmp, _tmp],
-          generateSideWallUV: () => [_tmp, _tmp, _tmp, _tmp],
-        },
+    let geometry = this.font.cache.getGeometry(this.char, this.fontSize);
+    if (geometry == null) {
+      // Use NormalComputationToggle to disable generating 'normal' data in returned geometry
+      // to save computation cost because rendering font characters don't need it.
+      geometry = NormalComputationToggle.runWithoutNormals<THREE.BufferGeometry>(() => {
+        const geometry = new TextGeometry(this.char, {
+          font: this.font.font,
+          depth: 0,
+          size: this.fontSize,
+          curveSegments: 3, // change this to increase/decrease display precision
+          bevelSegments: 3,
+          // Pass dummy uv generator to save computation cost because rendering font characters
+          // always use color material and don't need 'uv' data.
+          UVGenerator: {
+            generateTopUV: () => [_tmp, _tmp, _tmp],
+            generateSideWallUV: () => [_tmp, _tmp, _tmp, _tmp],
+          },
+        });
+        if (geometry.hasAttribute('uv')) {
+          geometry.deleteAttribute('uv');
+        }
+        if (geometry.hasAttribute('normal')) {
+          geometry.deleteAttribute('normal');
+        }
+        return mergeVertices(geometry, 1e-6);
       });
-      if (geometry.hasAttribute('uv')) {
-        geometry.deleteAttribute('uv');
-      }
-      if (geometry.hasAttribute('normal')) {
-        geometry.deleteAttribute('normal');
-      }
-      return mergeVertices(geometry, 1e-6);
-    });
+    }
+    return geometry;
   }
 
   /**

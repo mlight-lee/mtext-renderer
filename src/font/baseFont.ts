@@ -1,4 +1,5 @@
 import { BaseTextShape } from './baseTextShape';
+import { CharGeometryCache } from './charGeometryCache';
 import { FontType } from './font';
 
 /**
@@ -14,6 +15,22 @@ export abstract class BaseFont {
    * This data is used to render characters and calculate metrics.
    */
   public abstract readonly data: unknown;
+  /**
+   * Caching of font character geometries to improve text rendering performance.
+   */
+  public cache: CharGeometryCache;
+
+  constructor() {
+    this.cache = new CharGeometryCache();
+  }
+
+  /**
+   * Return true if this font contains glyph of the specified character. Otherwise, return false.
+   * @param char - The character to check
+   * @returns True if this font contains glyph of the specified character. Otherwise, return false.
+   */
+  abstract hasChar(char: string): boolean;
+
   /**
    * Record of characters that are not supported by this font.
    * Maps character strings to their occurrence count.

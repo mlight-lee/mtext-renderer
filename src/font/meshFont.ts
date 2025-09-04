@@ -43,6 +43,15 @@ export class MeshFont extends BaseFont {
   }
 
   /**
+   * Return true if this font contains glyph of the specified character. Otherwise, return false.
+   * @param char - The character to check
+   * @returns True if this font contains glyph of the specified character. Otherwise, return false.
+   */
+  hasChar(char: string): boolean {
+    return this.data.glyphs[char] != null;
+  }
+
+  /**
    * Generates shapes for a text string
    * @param text - The text to generate shapes for
    * @param size - The size of the text

@@ -136,13 +136,13 @@ export class FontManager {
   }
 
   /**
-   * Gets the text shape for a specific character with the specified font and size
-   * @param char - The character to get the shape for
-   * @param fontName - The name of the font to use
-   * @param size - The size of the character
-   * @returns The text shape for the character, or undefined if not found
+   * Gets font by font name. Return undefined if not found.
+   * @param fontName - The font name to find
+   * @param recordMissedFonts - Record the font name to property `missedFonts` in this class
+   * if the specified font name not found.
+   * @returns The font with the specified font name, or undefined if not found
    */
-  public getCharShape(char: string, fontName: string, size: number): BaseTextShape | undefined {
+  public getFontByName(fontName: string, recordMissedFonts: boolean = true): BaseFont | undefined {
     if (this.fontMap.size === 0) {
       return;
     }
@@ -151,15 +151,42 @@ export class FontManager {
     }
     let currentFont = this.fontMap.get(fontName.toLowerCase());
     if (!currentFont) {
-      this.recordMissedFonts(fontName);
-      // Try all fonts until we find one that can render the character
-      for (const [, font] of this.fontMap) {
-        const s = font.getCharShape(char, size);
-        if (s) {
-          currentFont = font;
-          break;
-        }
+      if (recordMissedFonts) {
+        this.recordMissedFonts(fontName);
       }
+      return undefined;
+    }
+    return currentFont;
+  }
+
+  /**
+   * Gets the first font which contains the specified character.
+   * @param char - The character to get the shape for
+   * @param fontName - The name of the font to use
+   * @param size - The size of the character
+   * @returns The text shape for the character, or undefined if not found
+   */
+  public getFontByChar(char: string): BaseFont | undefined {
+    // Try all fonts until we find one that can render the character
+    for (const [, font] of this.fontMap) {
+      if (font.hasChar(char)) {
+        return font;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Gets the text shape for a specific character with the specified font and size
+   * @param char - The character to get the shape for
+   * @param fontName - The name of the font to use
+   * @param size - The size of the character
+   * @returns The text shape for the character, or undefined if not found
+   */
+  public getCharShape(char: string, fontName: string, size: number): BaseTextShape | undefined {
+    let currentFont = this.getFontByName(fontName);
+    if (!currentFont) {
+      currentFont = this.getFontByChar(char);
     }
     return currentFont?.getCharShape(char, size);
   }

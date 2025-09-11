@@ -35,6 +35,7 @@ class MTextRendererExample {
       '{\\pql;Left aligned paragraph.}\\P{\\pqc;Center aligned paragraph.}\\P{\\pqr;Right aligned paragraph.}\\P{\\pqc;Center again.}\\P{\\pql;Back to left.}',
     paragraph:
       '{\\pql;\\P{\\pqi;\\pxi2;\\pxl5;\\pxr5;This paragraph has an indent of 2 units, left margin of 5 units, and right margin of 5 units. The first line is indented.}\\P{\\pqi;\\pxi2;\\pxl5;\\pxr5;This is the second line of the same paragraph, showing the effect of margins.}}',
+    multiple: 'multiple', // Special marker for multiple MText rendering
   };
 
   constructor() {
@@ -174,30 +175,37 @@ class MTextRendererExample {
         const exampleType = (button as HTMLElement).dataset.example;
         if (exampleType && this.exampleTexts[exampleType as keyof typeof this.exampleTexts]) {
           const content = this.exampleTexts[exampleType as keyof typeof this.exampleTexts];
-          this.mtextInput.value = content;
 
-          // Get required fonts from the MText content
-          const requiredFonts = Array.from(this.getFontsFromMText(content, true));
-          if (requiredFonts.length > 0) {
-            try {
-              // Show loading status
-              this.statusDiv.textContent = `Loading fonts: ${requiredFonts.join(', ')}...`;
-              this.statusDiv.style.color = '#ffa500';
+          if (content === 'multiple') {
+            // For multiple MText, don't update the textarea but render directly
+            await this.renderMText(content);
+          } else {
+            // For regular examples, update textarea and render
+            this.mtextInput.value = content;
 
-              // Load the required fonts
-              await this.unifiedRenderer.loadFonts(requiredFonts);
+            // Get required fonts from the MText content
+            const requiredFonts = Array.from(this.getFontsFromMText(content, true));
+            if (requiredFonts.length > 0) {
+              try {
+                // Show loading status
+                this.statusDiv.textContent = `Loading fonts: ${requiredFonts.join(', ')}...`;
+                this.statusDiv.style.color = '#ffa500';
 
-              // Update status
-              this.statusDiv.textContent = 'Fonts loaded successfully';
-              this.statusDiv.style.color = '#0f0';
-            } catch (error) {
-              console.error('Error loading fonts:', error);
-              this.statusDiv.textContent = `Error loading fonts: ${requiredFonts.join(', ')}`;
-              this.statusDiv.style.color = '#f00';
+                // Load the required fonts
+                await this.unifiedRenderer.loadFonts(requiredFonts);
+
+                // Update status
+                this.statusDiv.textContent = 'Fonts loaded successfully';
+                this.statusDiv.style.color = '#0f0';
+              } catch (error) {
+                console.error('Error loading fonts:', error);
+                this.statusDiv.textContent = `Error loading fonts: ${requiredFonts.join(', ')}`;
+                this.statusDiv.style.color = '#f00';
+              }
             }
-          }
 
-          await this.renderMText(content);
+            await this.renderMText(content);
+          }
         }
       });
     });
@@ -371,8 +379,51 @@ class MTextRendererExample {
     return this.mtextBox;
   }
 
+  private createMultipleMTextData(): { mtextData: MTextData; textStyle: TextStyle }[] {
+    const texts = [
+      '{\\C1;Title Text 1}\\P{\\C2;Subtitle with different colors}',
+      '{\\C3;Title Text 2}\\P{\\C4;Subtitle with different colors}',
+      '{\\C5;Title Text 3}\\P{\\C6;Subtitle with different colors}',
+      '{\\C7;Title Text 4}\\P{\\C8;Subtitle with different colors}',
+      '{\\C9;Title Text 5}\\P{\\C10;Subtitle with different colors}',
+      '{\\C11;Title Text 6}\\P{\\C12;Subtitle with different colors}',
+      '{\\C13;Title Text 7}\\P{\\C14;Subtitle with different colors}',
+      '{\\C15;Title Text 8}\\P{\\C16;Subtitle with different colors}',
+      '{\\C17;Title Text 9}\\P{\\C18;Subtitle with different colors}',
+      '{\\C19;Title Text 10}\\P{\\C20;Subtitle with different colors}',
+    ];
+
+    return texts.map((text, index) => {
+      const x = -2.5 + (index / 3) * 1.5;
+      const y = 2 - index * 0.2; // Adjusted to fit within camera frustum (-2.5 to +2.5)
+
+      return {
+        mtextData: {
+          text,
+          height: 0.08,
+          width: 1.4, // Reduced width to fit better in the grid
+          position: new THREE.Vector3(x, y, 0),
+        },
+        textStyle: {
+          name: 'Standard',
+          standardFlag: 0,
+          fixedTextHeight: 0.08,
+          widthFactor: 1,
+          obliqueAngle: 0,
+          textGenerationFlag: 0,
+          lastHeight: 0.08,
+          font: this.fontSelect.value,
+          bigFont: '',
+          color: 0xffffff,
+        },
+      };
+    });
+  }
+
   private async renderMText(content: string): Promise<void> {
     try {
+      const startTime = performance.now();
+
       // Show loading status
       this.statusDiv.textContent = 'Rendering MText...';
       this.statusDiv.style.color = '#ffa500';
@@ -382,54 +433,107 @@ class MTextRendererExample {
         this.scene.remove(this.currentMText);
       }
 
-      // Create MText data
-      const mtextContent: MTextData = {
-        text: content,
-        height: 0.1,
-        width: 5.5,
-        position: new THREE.Vector3(-3, 2, 0),
-      };
-
-      const textStyle: TextStyle = {
-        name: 'Standard',
-        standardFlag: 0,
-        fixedTextHeight: 0.1,
-        widthFactor: 1,
-        obliqueAngle: 0,
-        textGenerationFlag: 0,
-        lastHeight: 0.1,
-        font: this.fontSelect.value,
-        bigFont: '',
-        color: 0xffffff,
-      };
-
-      // Render MText using unified renderer
-      this.currentMText = await this.unifiedRenderer.renderMText(mtextContent, textStyle, {
-        byLayerColor: 0xffffff,
-        byBlockColor: 0xffffff,
-      });
-      this.scene.add(this.currentMText);
-
-      // Create box around MText using its bounding box only if checkbox is checked
-      if (
-        this.showBoundingBoxCheckbox.checked &&
-        (this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box &&
-        !(this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box.isEmpty()
-      ) {
-        const box = this.createMTextBox(
-          (this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box!,
-          new THREE.Vector3(
-            mtextContent.position.x,
-            mtextContent.position.y,
-            mtextContent.position.z
-          ),
-          mtextContent.width
-        );
-        this.scene.add(box);
+      // Remove existing bounding boxes
+      if (this.mtextBox) {
+        this.scene.remove(this.mtextBox);
+        this.mtextBox = null;
       }
 
-      // Update status
-      this.statusDiv.textContent = 'MText rendered successfully';
+      let renderTime: number;
+
+      if (content === 'multiple') {
+        // Render multiple MText objects
+        const multipleData = this.createMultipleMTextData();
+
+        const renderPromises = multipleData.map(({ mtextData, textStyle }) => {
+          return this.unifiedRenderer.renderMText(mtextData, textStyle, {
+            byLayerColor: 0xffffff,
+            byBlockColor: 0xffffff,
+          });
+        });
+
+        const mtextObjects = await Promise.all(renderPromises);
+
+        // Create a group to hold all MText objects
+        const group = new THREE.Group();
+        mtextObjects.forEach((mtextObj, index) => {
+          group.add(mtextObj);
+
+          // Add bounding boxes if enabled
+          if (
+            this.showBoundingBoxCheckbox.checked &&
+            (mtextObj as THREE.Object3D & { box?: THREE.Box3 }).box &&
+            !(mtextObj as THREE.Object3D & { box?: THREE.Box3 }).box!.isEmpty()
+          ) {
+            const box = this.createMTextBox(
+              (mtextObj as THREE.Object3D & { box?: THREE.Box3 }).box!,
+              new THREE.Vector3(
+                multipleData[index].mtextData.position.x,
+                multipleData[index].mtextData.position.y,
+                multipleData[index].mtextData.position.z
+              ),
+              multipleData[index].mtextData.width
+            );
+            group.add(box);
+          }
+        });
+
+        this.currentMText = group;
+        this.scene.add(this.currentMText);
+
+        renderTime = performance.now() - startTime;
+        this.statusDiv.textContent = `Rendered ${mtextObjects.length}/${multipleData.length} MText objects in ${renderTime.toFixed(2)}ms (${this.renderModeSelect.value} thread)`;
+      } else {
+        // Render single MText object
+        const mtextContent: MTextData = {
+          text: content,
+          height: 0.1,
+          width: 5.5,
+          position: new THREE.Vector3(-3, 2, 0),
+        };
+
+        const textStyle: TextStyle = {
+          name: 'Standard',
+          standardFlag: 0,
+          fixedTextHeight: 0.1,
+          widthFactor: 1,
+          obliqueAngle: 0,
+          textGenerationFlag: 0,
+          lastHeight: 0.1,
+          font: this.fontSelect.value,
+          bigFont: '',
+          color: 0xffffff,
+        };
+
+        // Render MText using unified renderer
+        this.currentMText = await this.unifiedRenderer.renderMText(mtextContent, textStyle, {
+          byLayerColor: 0xffffff,
+          byBlockColor: 0xffffff,
+        });
+        this.scene.add(this.currentMText);
+
+        // Create box around MText using its bounding box only if checkbox is checked
+        if (
+          this.showBoundingBoxCheckbox.checked &&
+          (this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box &&
+          !(this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box!.isEmpty()
+        ) {
+          const box = this.createMTextBox(
+            (this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box!,
+            new THREE.Vector3(
+              mtextContent.position.x,
+              mtextContent.position.y,
+              mtextContent.position.z
+            ),
+            mtextContent.width
+          );
+          this.scene.add(box);
+        }
+
+        renderTime = performance.now() - startTime;
+        this.statusDiv.textContent = `MText rendered in ${renderTime.toFixed(2)}ms (${this.renderModeSelect.value} thread)`;
+      }
+
       this.statusDiv.style.color = '#0f0';
     } catch (error) {
       console.error('Error rendering MText:', error);

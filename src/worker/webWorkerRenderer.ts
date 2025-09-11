@@ -54,6 +54,7 @@ interface SerializedChild {
       arrayBuffer: ArrayBuffer;
       byteOffset: number;
       length: number;
+      componentType?: 'uint16' | 'uint32';
     } | null;
   };
   material: {
@@ -82,6 +83,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   > = new Map();
   private requestId = 0;
   private poolSize: number;
+  private readyPromise: Promise<void> | null = null;
 
   constructor(
     poolSize: number = Math.max(
@@ -96,6 +98,9 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
       this.workers.push(worker);
       this.inFlightPerWorker.push(0);
     }
+
+    // Kick off initialization (each worker fetches its available fonts once)
+    void this.ensureInitialized();
   }
 
   private handleWorkerMessage(response: WorkerResponse) {
@@ -148,12 +153,19 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     return minIndex;
   }
 
-  private sendMessage(type: WorkerMessage['type'], data?: unknown): Promise<unknown> {
+  private sendMessage<TResponse = unknown>(
+    type: WorkerMessage['type'],
+    data?: unknown
+  ): Promise<TResponse> {
     const workerIndex = this.pickLeastLoadedWorker();
     const worker = this.workers[workerIndex];
-    return new Promise((resolve, reject) => {
+    return new Promise<TResponse>((resolve, reject) => {
       const id = `req_${++this.requestId}`;
-      this.pendingRequests.set(id, { resolve, reject, workerIndex });
+      this.pendingRequests.set(id, {
+        resolve: (value: unknown) => resolve(value as TResponse),
+        reject,
+        workerIndex,
+      });
       this.inFlightPerWorker[workerIndex] = (this.inFlightPerWorker[workerIndex] ?? 0) + 1;
       worker.postMessage({ type, id, data });
       setTimeout(() => {
@@ -170,6 +182,37 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     });
   }
 
+  private ensureInitialized(): Promise<void> {
+    if (this.readyPromise) return this.readyPromise;
+    if (this.workers.length === 0) return Promise.resolve();
+
+    this.readyPromise = Promise.all(
+      this.workers.map(
+        (worker, index) =>
+          new Promise<void>((resolve, reject) => {
+            const id = `req_${++this.requestId}`;
+            this.pendingRequests.set(id, {
+              resolve: () => resolve(),
+              reject,
+              workerIndex: index,
+            });
+            this.inFlightPerWorker[index] = (this.inFlightPerWorker[index] ?? 0) + 1;
+            worker.postMessage({ type: 'getAvailableFonts', id });
+            setTimeout(() => {
+              const pending = this.pendingRequests.get(id);
+              if (pending) {
+                this.pendingRequests.delete(id);
+                this.inFlightPerWorker[index] = Math.max(0, this.inFlightPerWorker[index] - 1);
+                reject(new Error('Worker init timeout'));
+              }
+            }, 30000);
+          })
+      )
+    ).then(() => undefined);
+
+    return this.readyPromise;
+  }
+
   /**
    * Render MText in the worker and return serialized data
    */
@@ -178,7 +221,8 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     textStyle: TextStyle,
     colorSettings: ColorSettings = { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
   ): Promise<THREE.Object3D> {
-    const serialized: SerializedMText = await this.sendMessage('render', {
+    await this.ensureInitialized();
+    const serialized = await this.sendMessage<SerializedMText>('render', {
       mtextContent,
       textStyle,
       colorSettings,
@@ -190,6 +234,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
    * Load fonts in the worker
    */
   async loadFonts(fonts: string[]): Promise<{ loaded: string[] }> {
+    await this.ensureInitialized();
     const results = await Promise.all(
       this.workers.map(
         (worker, index) =>
@@ -224,11 +269,16 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   async getAvailableFonts(): Promise<{ fonts: Array<{ name: string[] }> }> {
     // Query a single worker (all should be in sync after loadFonts broadcasts)
     if (this.workers.length === 0) return { fonts: [] };
+    await this.ensureInitialized();
     const workerIndex = 0;
     const worker = this.workers[workerIndex];
-    return new Promise((resolve, reject) => {
+    return new Promise<{ fonts: Array<{ name: string[] }> }>((resolve, reject) => {
       const id = `req_${++this.requestId}`;
-      this.pendingRequests.set(id, { resolve, reject, workerIndex });
+      this.pendingRequests.set(id, {
+        resolve: (value: unknown) => resolve(value as { fonts: Array<{ name: string[] }> }),
+        reject,
+        workerIndex,
+      });
       this.inFlightPerWorker[workerIndex] = (this.inFlightPerWorker[workerIndex] ?? 0) + 1;
       worker.postMessage({ type: 'getAvailableFonts', id });
       setTimeout(() => {
@@ -270,12 +320,22 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
 
       // Reconstruct index if present from ArrayBuffer
       if (childData.geometry.index) {
-        const indexTypedArray = new Uint16Array(
-          childData.geometry.index.arrayBuffer,
-          childData.geometry.index.byteOffset,
-          childData.geometry.index.length
-        );
-        geometry.setIndex(new THREE.Uint16BufferAttribute(indexTypedArray, 1));
+        const useUint32 = childData.geometry.index.componentType === 'uint32';
+        if (useUint32) {
+          const indexTypedArray = new Uint32Array(
+            childData.geometry.index.arrayBuffer,
+            childData.geometry.index.byteOffset,
+            childData.geometry.index.length
+          );
+          geometry.setIndex(new THREE.Uint32BufferAttribute(indexTypedArray, 1));
+        } else {
+          const indexTypedArray = new Uint16Array(
+            childData.geometry.index.arrayBuffer,
+            childData.geometry.index.byteOffset,
+            childData.geometry.index.length
+          );
+          geometry.setIndex(new THREE.Uint16BufferAttribute(indexTypedArray, 1));
+        }
       }
 
       // Create material
@@ -304,6 +364,15 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
         object = new THREE.Line(geometry, material as THREE.LineBasicMaterial);
       }
 
+      // Ensure geometry has bounding volumes for correct frustum culling
+      // This helps prevent objects from being culled as invisible
+      if (!geometry.boundingBox) {
+        geometry.computeBoundingBox();
+      }
+      if (!geometry.boundingSphere) {
+        geometry.computeBoundingSphere();
+      }
+
       // Set position, rotation, and scale directly (already in world coordinates)
       object.position.set(childData.position.x, childData.position.y, childData.position.z);
 
@@ -320,7 +389,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     });
 
     // Add transformed bounding box property (already in world coordinates)
-    (group as THREE.Object3D & { box: THREE.Box3 }).box = new THREE.Box3(
+    (group as unknown as THREE.Object3D & { box: THREE.Box3 }).box = new THREE.Box3(
       new THREE.Vector3(
         serializedData.box.min.x,
         serializedData.box.min.y,
@@ -343,6 +412,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     this.workers.forEach((w) => w.terminate());
     this.workers = [];
     this.inFlightPerWorker = [];
+    this.readyPromise = null;
     // Reject any remaining pending requests
     this.pendingRequests.forEach(({ reject }) => {
       reject(new Error('Renderer terminated'));

@@ -2,6 +2,7 @@ import { MText } from '../renderer/mtext';
 import { FontManager } from '../font';
 import { StyleManager } from '../renderer/styleManager';
 import { DefaultFontLoader } from '../font/defaultFontLoader';
+import { MTextData, TextStyle, ColorSettings } from '../renderer/types';
 import * as THREE from 'three';
 
 // Worker message types
@@ -39,7 +40,13 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
   try {
     switch (type) {
       case 'render': {
-        const { mtextContent, textStyle, colorSettings } = data;
+        if (!data) throw new Error('Missing data for render message');
+        const { mtextContent, textStyle, colorSettings } = data as {
+          mtextContent: MTextData;
+          textStyle: TextStyle;
+          colorSettings: ColorSettings;
+        };
+        console.log('mtextContent', mtextContent);
 
         // Create MText instance
         const mtext = new MText(mtextContent, textStyle, styleManager, fontManager, colorSettings);
@@ -63,7 +70,8 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
       }
 
       case 'loadFonts': {
-        const { fonts } = data;
+        if (!data) throw new Error('Missing data for loadFonts message');
+        const { fonts } = data as { fonts: string[] };
         await fontLoader.load(fonts);
 
         self.postMessage({
@@ -204,8 +212,12 @@ function serializeChildren(mtext: MText): {
         }
 
         // Serialize index if present using transferable objects
-        let indexData: { arrayBuffer: ArrayBuffer; byteOffset: number; length: number } | null =
-          null;
+        let indexData: {
+          arrayBuffer: ArrayBuffer;
+          byteOffset: number;
+          length: number;
+          componentType: 'uint16' | 'uint32';
+        } | null = null;
         if (geometry.index) {
           const indexArray = geometry.index.array;
           const indexBuffer = indexArray.buffer.slice(
@@ -218,6 +230,7 @@ function serializeChildren(mtext: MText): {
             arrayBuffer: indexBuffer,
             byteOffset: 0, // Since we sliced the buffer, offset is always 0
             length: indexArray.length,
+            componentType: indexArray instanceof Uint32Array ? 'uint32' : 'uint16',
           };
         }
 

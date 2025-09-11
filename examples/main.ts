@@ -77,7 +77,7 @@ class MTextRendererExample {
     this.controls.maxPolarAngle = Math.PI / 2;
 
     // Initialize unified renderer (default to main thread)
-    this.unifiedRenderer = new UnifiedRenderer('worker');
+    this.unifiedRenderer = new UnifiedRenderer('main');
 
     // Get DOM elements
     this.mtextInput = document.getElementById('mtext-input') as HTMLTextAreaElement;
@@ -221,8 +221,27 @@ class MTextRendererExample {
     this.renderModeSelect.addEventListener('change', async () => {
       const mode = this.renderModeSelect.value as RenderMode;
       this.unifiedRenderer.switchMode(mode);
-      this.statusDiv.textContent = `Switched to ${mode} thread rendering`;
-      this.statusDiv.style.color = '#0f0';
+
+      try {
+        // Ensure required fonts are available in the new mode
+        const currentContent = this.mtextInput.value;
+        const requiredFonts = new Set<string>();
+        // From dropdown
+        if (this.fontSelect.value) requiredFonts.add(this.fontSelect.value);
+        // From MText content
+        this.getFontsFromMText(currentContent, true).forEach((f) => requiredFonts.add(f));
+        if (requiredFonts.size > 0) {
+          await this.unifiedRenderer.loadFonts(Array.from(requiredFonts));
+        }
+
+        this.statusDiv.textContent = `Switched to ${mode} thread rendering`;
+        this.statusDiv.style.color = '#0f0';
+      } catch (e) {
+        console.error('Error preparing fonts after mode switch:', e);
+        this.statusDiv.textContent = `Switched to ${mode} thread (font prep failed)`;
+        this.statusDiv.style.color = '#ffa500';
+      }
+
       // Re-render with current content to reflect the new mode
       await this.renderMText(this.mtextInput.value);
     });
@@ -394,8 +413,10 @@ class MTextRendererExample {
     ];
 
     return texts.map((text, index) => {
-      const x = -2.5 + (index / 3) * 1.5;
-      const y = 2 - index * 0.2; // Adjusted to fit within camera frustum (-2.5 to +2.5)
+      const col = index % 3;
+      const row = Math.floor(index / 3);
+      const x = -2.5 + col * 1.5; // 3 per row horizontally
+      const y = 2 - row * 0.5; // move down per row to fit within frustum
 
       return {
         mtextData: {

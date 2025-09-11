@@ -14,13 +14,14 @@ export default defineConfig({
         main: resolve(__dirname, 'main.ts'),
       },
       output: {
-        entryFileNames: 'main.js',
         format: 'es',
-        sourcemap: true,
       },
     },
   },
   optimizeDeps: {
     include: ['three'],
+  },
+  worker: {
+    format: 'es',
   },
 });

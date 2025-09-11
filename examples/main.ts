@@ -1,19 +1,15 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { MText } from '../src/renderer/mtext';
-import { FontManager } from '../src/font';
-import { StyleManager } from '../src/renderer/styleManager';
-import { DefaultFontLoader } from '../src/font/defaultFontLoader';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { UnifiedRenderer, RenderMode } from '../src/worker';
+import { MTextData, TextStyle } from '../src/renderer/types';
 
 class MTextRendererExample {
   private scene: THREE.Scene;
   private camera: THREE.OrthographicCamera;
   private renderer: THREE.WebGLRenderer;
   private controls: OrbitControls;
-  private fontManager: FontManager;
-  private styleManager: StyleManager;
-  private currentMText: MText | null = null;
-  private fontLoader: DefaultFontLoader;
+  private unifiedRenderer: UnifiedRenderer;
+  private currentMText: THREE.Object3D | null = null;
   private mtextBox: THREE.LineSegments | null = null;
 
   // DOM elements
@@ -22,6 +18,7 @@ class MTextRendererExample {
   private statusDiv: HTMLDivElement;
   private fontSelect: HTMLSelectElement;
   private showBoundingBoxCheckbox: HTMLInputElement;
+  private renderModeSelect: HTMLSelectElement;
 
   // Example texts
   private readonly exampleTexts = {
@@ -78,11 +75,8 @@ class MTextRendererExample {
     this.controls.maxDistance = 50;
     this.controls.maxPolarAngle = Math.PI / 2;
 
-    // Initialize managers and loader
-    this.fontManager = FontManager.instance;
-    this.fontManager.defaultFont = 'simkai';
-    this.styleManager = new StyleManager();
-    this.fontLoader = new DefaultFontLoader();
+    // Initialize unified renderer (default to main thread)
+    this.unifiedRenderer = new UnifiedRenderer('worker');
 
     // Get DOM elements
     this.mtextInput = document.getElementById('mtext-input') as HTMLTextAreaElement;
@@ -90,6 +84,7 @@ class MTextRendererExample {
     this.statusDiv = document.getElementById('status') as HTMLDivElement;
     this.fontSelect = document.getElementById('font-select') as HTMLSelectElement;
     this.showBoundingBoxCheckbox = document.getElementById('show-bounding-box') as HTMLInputElement;
+    this.renderModeSelect = document.getElementById('render-mode') as HTMLSelectElement;
 
     // Add lights
     this.setupLights();
@@ -101,7 +96,7 @@ class MTextRendererExample {
     this.initializeFonts()
       .then(() => {
         // Initial render after fonts are loaded
-        this.renderMText(this.mtextInput.value);
+        void this.renderMText(this.mtextInput.value);
       })
       .catch((error) => {
         console.error('Failed to initialize fonts:', error);
@@ -142,11 +137,9 @@ class MTextRendererExample {
     });
 
     // Render button
-    this.renderBtn.addEventListener('click', () => {
+    this.renderBtn.addEventListener('click', async () => {
       const content = this.mtextInput.value;
-      this.renderMText(content);
-      this.statusDiv.textContent = 'MText rendered successfully';
-      this.statusDiv.style.color = '#0f0';
+      await this.renderMText(content);
     });
 
     // Font selection
@@ -160,10 +153,10 @@ class MTextRendererExample {
         this.statusDiv.style.color = '#ffa500';
 
         // Load the selected font
-        await this.fontLoader.load([selectedFont]);
+        await this.unifiedRenderer.loadFonts([selectedFont]);
 
         // Re-render MText with new font
-        this.renderMText(content);
+        await this.renderMText(content);
 
         // Update status
         this.statusDiv.textContent = `Font changed to ${selectedFont}`;
@@ -184,7 +177,7 @@ class MTextRendererExample {
           this.mtextInput.value = content;
 
           // Get required fonts from the MText content
-          const requiredFonts = Array.from(MText.getFonts(content, true));
+          const requiredFonts = Array.from(this.getFontsFromMText(content, true));
           if (requiredFonts.length > 0) {
             try {
               // Show loading status
@@ -192,7 +185,7 @@ class MTextRendererExample {
               this.statusDiv.style.color = '#ffa500';
 
               // Load the required fonts
-              await this.fontLoader.load(requiredFonts);
+              await this.unifiedRenderer.loadFonts(requiredFonts);
 
               // Update status
               this.statusDiv.textContent = 'Fonts loaded successfully';
@@ -204,7 +197,7 @@ class MTextRendererExample {
             }
           }
 
-          this.renderMText(content);
+          await this.renderMText(content);
         }
       });
     });
@@ -215,15 +208,26 @@ class MTextRendererExample {
         this.mtextBox.visible = this.showBoundingBoxCheckbox.checked;
       }
     });
+
+    // Render mode toggle
+    this.renderModeSelect.addEventListener('change', async () => {
+      const mode = this.renderModeSelect.value as RenderMode;
+      this.unifiedRenderer.switchMode(mode);
+      this.statusDiv.textContent = `Switched to ${mode} thread rendering`;
+      this.statusDiv.style.color = '#0f0';
+      // Re-render with current content to reflect the new mode
+      await this.renderMText(this.mtextInput.value);
+    });
   }
 
   private async initializeFonts(): Promise<void> {
     try {
       // Load available fonts for the dropdown
-      const fonts = await this.fontLoader.getAvaiableFonts();
+      const result = await this.unifiedRenderer.getAvailableFonts();
+      const fonts = result.fonts;
 
       // Load default fonts
-      await this.fontLoader.load([this.fontManager.defaultFont]);
+      await this.unifiedRenderer.loadFonts(['simkai']);
 
       // Clear existing options
       this.fontSelect.innerHTML = '';
@@ -234,7 +238,7 @@ class MTextRendererExample {
         option.value = font.name[0];
         option.textContent = font.name[0]; // Use the first name from the array
         // Set selected if this is the default font
-        if (font.name[0] === this.fontManager.defaultFont) {
+        if (font.name[0] === 'simkai') {
           option.selected = true;
         }
         this.fontSelect.appendChild(option);
@@ -367,23 +371,26 @@ class MTextRendererExample {
     return this.mtextBox;
   }
 
-  private renderMText(content: string): void {
-    // Remove existing MText if any
-    if (this.currentMText) {
-      this.scene.remove(this.currentMText);
-    }
+  private async renderMText(content: string): Promise<void> {
+    try {
+      // Show loading status
+      this.statusDiv.textContent = 'Rendering MText...';
+      this.statusDiv.style.color = '#ffa500';
 
-    // Create new MText instance
-    const mtextContent = {
-      text: content,
-      height: 0.1,
-      width: 5.5,
-      position: new THREE.Vector3(-3, 2, 0),
-    };
+      // Remove existing MText if any
+      if (this.currentMText) {
+        this.scene.remove(this.currentMText);
+      }
 
-    this.currentMText = new MText(
-      mtextContent,
-      {
+      // Create MText data
+      const mtextContent: MTextData = {
+        text: content,
+        height: 0.1,
+        width: 5.5,
+        position: new THREE.Vector3(-3, 2, 0),
+      };
+
+      const textStyle: TextStyle = {
         name: 'Standard',
         standardFlag: 0,
         fixedTextHeight: 0.1,
@@ -394,26 +401,60 @@ class MTextRendererExample {
         font: this.fontSelect.value,
         bigFont: '',
         color: 0xffffff,
-      },
-      this.styleManager,
-      this.fontManager
-    );
+      };
 
-    this.scene.add(this.currentMText);
+      // Render MText using unified renderer
+      this.currentMText = await this.unifiedRenderer.renderMText(mtextContent, textStyle, {
+        byLayerColor: 0xffffff,
+        byBlockColor: 0xffffff,
+      });
+      this.scene.add(this.currentMText);
 
-    // Create box around MText using its bounding box only if checkbox is checked
-    if (
-      this.showBoundingBoxCheckbox.checked &&
-      this.currentMText.box &&
-      !this.currentMText.box.isEmpty()
-    ) {
-      const box = this.createMTextBox(
-        this.currentMText.box,
-        mtextContent.position,
-        mtextContent.width
-      );
-      this.scene.add(box);
+      // Create box around MText using its bounding box only if checkbox is checked
+      if (
+        this.showBoundingBoxCheckbox.checked &&
+        (this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box &&
+        !(this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box.isEmpty()
+      ) {
+        const box = this.createMTextBox(
+          (this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box!,
+          new THREE.Vector3(
+            mtextContent.position.x,
+            mtextContent.position.y,
+            mtextContent.position.z
+          ),
+          mtextContent.width
+        );
+        this.scene.add(box);
+      }
+
+      // Update status
+      this.statusDiv.textContent = 'MText rendered successfully';
+      this.statusDiv.style.color = '#0f0';
+    } catch (error) {
+      console.error('Error rendering MText:', error);
+      this.statusDiv.textContent = 'Error rendering MText';
+      this.statusDiv.style.color = '#f00';
     }
+  }
+
+  /**
+   * Extract font names from MText content (simplified version)
+   */
+  private getFontsFromMText(mtext: string, removeExtension: boolean = false): Set<string> {
+    const fonts = new Set<string>();
+    const fontRegex = /\\f([^\\|;]+)/gi;
+    let match;
+
+    while ((match = fontRegex.exec(mtext)) !== null) {
+      let fontName = match[1].toLowerCase();
+      if (removeExtension) {
+        fontName = fontName.replace(/\.(ttf|otf|shx)$/i, '');
+      }
+      fonts.add(fontName);
+    }
+
+    return fonts;
   }
 
   private animate(): void {
@@ -421,7 +462,19 @@ class MTextRendererExample {
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
+
+  /**
+   * Cleanup method to destroy the renderer
+   */
+  public destroy(): void {
+    this.unifiedRenderer.destroy();
+  }
 }
 
 // Create and start the example
-new MTextRendererExample();
+const app = new MTextRendererExample();
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  app.destroy();
+});

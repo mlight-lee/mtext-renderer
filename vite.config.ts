@@ -20,5 +20,10 @@ export default defineConfig({
       }
     }
   },
-  plugins: [dts()]
+  plugins: [
+    dts({
+      outDir: 'lib',
+      insertTypesEntry: true
+    })
+  ]
 });

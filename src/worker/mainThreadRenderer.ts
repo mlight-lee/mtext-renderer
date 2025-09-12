@@ -4,7 +4,7 @@ import { FontManager } from '../font';
 import { StyleManager } from '../renderer/styleManager';
 import { DefaultFontLoader } from '../font/defaultFontLoader';
 import { MTextData, TextStyle, ColorSettings } from '../renderer/types';
-import { MTextBaseRenderer } from './baseRenderer';
+import { MTextBaseRenderer, MTextObject } from './baseRenderer';
 
 /**
  * Main thread renderer for MText objects
@@ -31,7 +31,7 @@ export class MainThreadRenderer implements MTextBaseRenderer {
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings: ColorSettings = { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
-  ): Promise<THREE.Object3D> {
+  ): Promise<MTextObject> {
     // Create MText instance
     const mtext = new MText(
       mtextContent,
@@ -44,7 +44,7 @@ export class MainThreadRenderer implements MTextBaseRenderer {
     // Update the world matrix to ensure all transformations are applied
     mtext.updateMatrixWorld(true);
 
-    return mtext;
+    return mtext as MTextObject;
   }
 
   /**

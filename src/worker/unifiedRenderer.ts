@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { MTextData, TextStyle, ColorSettings } from '../renderer/types';
 import { WebWorkerRenderer } from './webWorkerRenderer';
 import { MainThreadRenderer } from './mainThreadRenderer';
-import { MTextBaseRenderer } from './baseRenderer';
+import { MTextBaseRenderer, MTextObject } from './baseRenderer';
 
 export type RenderMode = 'main' | 'worker';
 
@@ -64,7 +64,7 @@ export class UnifiedRenderer {
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings: ColorSettings = { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
-  ): Promise<THREE.Object3D> {
+  ): Promise<MTextObject> {
     return this.adapter.renderMText(mtextContent, textStyle, colorSettings);
   }
 

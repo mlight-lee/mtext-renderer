@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { UnifiedRenderer, RenderMode } from '../src/worker';
 import { MTextData, TextStyle } from '../src/renderer/types';
+import { MTextObject } from '../src/worker/baseRenderer';
 
 class MTextRendererExample {
   private scene: THREE.Scene;
@@ -9,7 +10,7 @@ class MTextRendererExample {
   private renderer: THREE.WebGLRenderer;
   private controls: OrbitControls;
   private unifiedRenderer: UnifiedRenderer;
-  private currentMText: THREE.Object3D | null = null;
+  private currentMText: MTextObject | null = null;
   private mtextBox: THREE.LineSegments | null = null;
 
   // DOM elements
@@ -473,21 +474,32 @@ class MTextRendererExample {
           });
         });
 
-        const mtextObjects = await Promise.all(renderPromises);
+        const mtextObjects: MTextObject[] = await Promise.all(renderPromises);
 
         // Create a group to hold all MText objects
         const group = new THREE.Group();
+        let combinedBox: THREE.Box3 | null = null;
+        
         mtextObjects.forEach((mtextObj, index) => {
           group.add(mtextObj);
+
+          // Combine bounding boxes
+          if (mtextObj.box && !mtextObj.box.isEmpty()) {
+            if (combinedBox === null) {
+              combinedBox = mtextObj.box.clone();
+            } else {
+              combinedBox.union(mtextObj.box);
+            }
+          }
 
           // Add bounding boxes if enabled
           if (
             this.showBoundingBoxCheckbox.checked &&
-            (mtextObj as THREE.Object3D & { box?: THREE.Box3 }).box &&
-            !(mtextObj as THREE.Object3D & { box?: THREE.Box3 }).box!.isEmpty()
+            mtextObj.box &&
+            !mtextObj.box.isEmpty()
           ) {
             const box = this.createMTextBox(
-              (mtextObj as THREE.Object3D & { box?: THREE.Box3 }).box!,
+              mtextObj.box,
               new THREE.Vector3(
                 multipleData[index].mtextData.position.x,
                 multipleData[index].mtextData.position.y,
@@ -499,7 +511,14 @@ class MTextRendererExample {
           }
         });
 
-        this.currentMText = group;
+        // Add combined bounding box to the group
+        if (combinedBox) {
+          (group as unknown as MTextObject).box = combinedBox;
+        } else {
+          (group as unknown as MTextObject).box = new THREE.Box3();
+        }
+
+        this.currentMText = group as unknown as MTextObject;
         this.scene.add(this.currentMText);
 
         renderTime = performance.now() - startTime;
@@ -536,11 +555,12 @@ class MTextRendererExample {
         // Create box around MText using its bounding box only if checkbox is checked
         if (
           this.showBoundingBoxCheckbox.checked &&
-          (this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box &&
-          !(this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box!.isEmpty()
+          this.currentMText &&
+          this.currentMText.box &&
+          !this.currentMText.box.isEmpty()
         ) {
           const box = this.createMTextBox(
-            (this.currentMText as THREE.Object3D & { box?: THREE.Box3 }).box!,
+            this.currentMText.box,
             new THREE.Vector3(
               mtextContent.position.x,
               mtextContent.position.y,

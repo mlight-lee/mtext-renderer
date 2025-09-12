@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { MTextData, TextStyle, ColorSettings } from '../renderer/types';
-import { MTextBaseRenderer } from './baseRenderer';
+import { MTextBaseRenderer, MTextObject } from './baseRenderer';
 
 // Worker message types
 interface WorkerMessage {
@@ -220,7 +220,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings: ColorSettings = { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
-  ): Promise<THREE.Object3D> {
+  ): Promise<MTextObject> {
     await this.ensureInitialized();
     const serialized = await this.sendMessage<SerializedMText>('render', {
       mtextContent,
@@ -298,7 +298,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   /**
    * Reconstruct MText object from JSON serialized data
    */
-  reconstructMText(serializedData: SerializedMText): THREE.Object3D {
+  reconstructMText(serializedData: SerializedMText): MTextObject {
     const group = new THREE.Group();
 
     // Reconstruct all child objects
@@ -389,7 +389,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     });
 
     // Add transformed bounding box property (already in world coordinates)
-    (group as unknown as THREE.Object3D & { box: THREE.Box3 }).box = new THREE.Box3(
+    (group as unknown as MTextObject).box = new THREE.Box3(
       new THREE.Vector3(
         serializedData.box.min.x,
         serializedData.box.min.y,
@@ -402,7 +402,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
       )
     );
 
-    return group;
+    return group as unknown as MTextObject;
   }
 
   /**

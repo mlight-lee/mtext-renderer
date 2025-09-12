@@ -46,7 +46,6 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
           textStyle: TextStyle;
           colorSettings: ColorSettings;
         };
-        console.log('mtextContent', mtextContent);
 
         // Create MText instance
         const mtext = new MText(mtextContent, textStyle, styleManager, fontManager, colorSettings);

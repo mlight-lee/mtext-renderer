@@ -2,6 +2,19 @@ import * as THREE from 'three';
 import { MTextData, TextStyle, ColorSettings } from '../renderer/types';
 
 /**
+ * Represents a rendered MText object that extends THREE.Object3D with additional MText-specific properties.
+ * This interface defines the contract for objects returned by MText renderers.
+ */
+export interface MTextObject extends THREE.Object3D {
+  /**
+   * The bounding box of the MText object in local coordinates.
+   * This box represents the bounds of the text content without considering transformations.
+   * To get the world-space bounding box, apply the object's world matrix to this box.
+   */
+  box: THREE.Box3;
+}
+
+/**
  * Defines the common rendering contract for producing Three.js objects from MText content.
  *
  * Implementations may render on the main thread or delegate work to a Web Worker,
@@ -13,18 +26,18 @@ export interface MTextBaseRenderer {
    * Render the provided MText content into a Three.js object hierarchy.
    *
    * The returned root object contains meshes/lines for glyphs and exposes a
-   * bounding box on `object.box` if available.
+   * bounding box on `object.box`.
    *
    * @param mtextContent Structured MText input (text, height, width, position).
    * @param textStyle Text style to apply (font, width factor, oblique, etc.).
    * @param colorSettings Optional color context (ByLayer, ByBlock colors).
-   * @returns A Promise resolving to a populated `THREE.Object3D` ready to add to a scene.
+   * @returns A Promise resolving to a populated `MTextObject` ready to add to a scene.
    */
   renderMText(
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings?: ColorSettings
-  ): Promise<THREE.Object3D>;
+  ): Promise<MTextObject>;
 
   /**
    * Ensure the specified fonts are available to the renderer.

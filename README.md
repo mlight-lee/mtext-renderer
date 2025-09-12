@@ -85,6 +85,83 @@ Manages font data caching using IndexedDB. Provides persistent storage for font 
 - `getAll()`: Retrieves all cached font data
 - `clear()`: Clears all cached font data
 
+## Worker-Based Rendering System
+
+The package provides a sophisticated worker-based rendering system that allows MText rendering to be performed in Web Workers, preventing blocking of the main UI thread. This is particularly beneficial for rendering large amounts of text or complex MText content.
+
+### MTextBaseRenderer Interface
+
+Defines the common rendering contract for producing Three.js objects from MText content. All renderer implementations must conform to this interface.
+
+**Public Methods:**
+- `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText content into a Three.js object hierarchy
+- `loadFonts(fonts)`: Ensure specified fonts are available to the renderer
+- `getAvailableFonts()`: Retrieve list of fonts that can be used by the renderer
+- `destroy()`: Release any resources owned by the renderer
+
+### MTextObject Interface
+
+Represents a rendered MText object that extends THREE.Object3D with additional MText-specific properties.
+
+**Public Properties:**
+- `box`: The bounding box of the MText object in local coordinates
+
+### MainThreadRenderer
+
+Renders MText content directly in the main thread. This is the simplest renderer implementation that provides the same interface as worker-based renderers but runs synchronously in the main thread.
+
+**Public Methods:**
+- `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText directly in the main thread
+- `loadFonts(fonts)`: Load fonts in the main thread
+- `getAvailableFonts()`: Get available fonts from the main thread
+- `destroy()`: Cleanup resources
+
+### WebWorkerRenderer (MTextWorkerManager)
+
+Manages communication with MText Web Workers for parallel text rendering. This renderer uses a pool of Web Workers to distribute rendering tasks, improving performance for large text content.
+
+**Public Properties:**
+- `poolSize`: Number of workers in the pool (defaults to optimal size based on hardware concurrency)
+
+**Public Methods:**
+- `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText using worker pool
+- `loadFonts(fonts)`: Load fonts in all workers
+- `getAvailableFonts()`: Get available fonts from workers
+- `terminate()`: Terminate all workers
+- `destroy()`: Cleanup all resources
+
+**Features:**
+- Automatic worker pool management
+- Load balancing across workers
+- Efficient serialization/deserialization of Three.js objects
+- Transferable object support for optimal performance
+- Error handling and timeout management
+
+### UnifiedRenderer
+
+A flexible renderer that can switch between main thread and Web Worker rendering modes at runtime. This allows applications to dynamically choose the best rendering strategy based on current conditions.
+
+**Public Properties:**
+- `currentMode`: Current rendering mode ('main' or 'worker')
+
+**Public Methods:**
+- `switchMode(mode)`: Switch between main thread and worker rendering modes
+- `getMode()`: Get current rendering mode
+- `renderMText(mtextContent, textStyle, colorSettings?)`: Render using current mode
+- `loadFonts(fonts)`: Load fonts using current mode
+- `getAvailableFonts()`: Get available fonts using current mode
+- `destroy()`: Clean up all resources
+
+### MTextWorker
+
+The actual Web Worker implementation that handles MText rendering tasks. This worker contains its own FontManager, StyleManager, and FontLoader instances, allowing it to work independently from the main thread.
+
+**Features:**
+- Independent font and style management
+- Efficient object serialization for transfer to main thread
+- Support for transferable objects to minimize memory copying
+- Error handling and response management
+
 ### MText
 Main class for rendering AutoCAD MText content. Extends THREE.Object3D to integrate with Three.js scene graph.
 
@@ -175,6 +252,62 @@ classDiagram
         +clear()
     }
 
+    class MTextBaseRenderer {
+        <<interface>>
+        +renderMText(mtextContent, textStyle, colorSettings?)
+        +loadFonts(fonts)
+        +getAvailableFonts()
+        +destroy()
+    }
+
+    class MTextObject {
+        <<interface>>
+        +box: Box3
+    }
+
+    class MainThreadRenderer {
+        -fontManager: FontManager
+        -styleManager: StyleManager
+        -fontLoader: DefaultFontLoader
+        +renderMText(mtextContent, textStyle, colorSettings?)
+        +loadFonts(fonts)
+        +getAvailableFonts()
+        +destroy()
+    }
+
+    class WebWorkerRenderer {
+        -workers: Worker[]
+        -inFlightPerWorker: number[]
+        -pendingRequests: Map
+        -poolSize: number
+        +renderMText(mtextContent, textStyle, colorSettings?)
+        +loadFonts(fonts)
+        +getAvailableFonts()
+        +terminate()
+        +destroy()
+    }
+
+    class UnifiedRenderer {
+        -workerManager: WebWorkerRenderer
+        -mainThreadRenderer: MainThreadRenderer
+        -adapter: MTextBaseRenderer
+        -currentMode: RenderMode
+        +switchMode(mode)
+        +getMode()
+        +renderMText(mtextContent, textStyle, colorSettings?)
+        +loadFonts(fonts)
+        +getAvailableFonts()
+        +destroy()
+    }
+
+    class MTextWorker {
+        +fontManager: FontManager
+        +styleManager: StyleManager
+        +fontLoader: DefaultFontLoader
+        +serializeMText(mtext)
+        +serializeChildren(mtext)
+    }
+
     MText --> FontManager
     MText --> StyleManager
     FontManager --> FontFactory
@@ -185,6 +318,16 @@ classDiagram
     BaseFont <|-- ShxFont
     BaseTextShape <|-- MeshTextShape
     BaseTextShape <|-- ShxTextShape
+    MainThreadRenderer ..|> MTextBaseRenderer
+    WebWorkerRenderer ..|> MTextBaseRenderer
+    UnifiedRenderer --> WebWorkerRenderer
+    UnifiedRenderer --> MainThreadRenderer
+    UnifiedRenderer ..|> MTextBaseRenderer
+    MTextWorker --> FontManager
+    MTextWorker --> StyleManager
+    MTextWorker --> DefaultFontLoader
+    WebWorkerRenderer --> MTextWorker
+    MTextBaseRenderer --> MTextObject
 ```
 
 ## Usage
@@ -231,6 +374,112 @@ const mtext = new MText(
 // Add to Three.js scene
 scene.add(mtext);
 ```
+
+## Worker-Based Rendering Usage
+
+### Using MainThreadRenderer
+
+```typescript
+import { MainThreadRenderer } from '@mlightcad/mtext-renderer';
+
+// Create main thread renderer
+const renderer = new MainThreadRenderer();
+
+// Load required fonts
+await renderer.loadFonts(['simsun', 'arial']);
+
+// Render MText content
+const mtextObject = await renderer.renderMText(
+  mtextContent,
+  textStyle,
+  { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
+);
+
+// Add to scene
+scene.add(mtextObject);
+```
+
+### Using WebWorkerRenderer
+
+```typescript
+import { WebWorkerRenderer } from '@mlightcad/mtext-renderer';
+
+// Create worker renderer with custom pool size
+const workerRenderer = new WebWorkerRenderer(4); // 4 workers
+
+// Load fonts in all workers
+await workerRenderer.loadFonts(['simsun', 'arial']);
+
+// Render MText content using workers
+const mtextObject = await workerRenderer.renderMText(
+  mtextContent,
+  textStyle,
+  { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
+);
+
+// Add to scene
+scene.add(mtextObject);
+
+// Clean up when done
+workerRenderer.destroy();
+```
+
+### Using UnifiedRenderer
+
+```typescript
+import { UnifiedRenderer } from '@mlightcad/mtext-renderer';
+
+// Create unified renderer starting in main thread mode
+const unifiedRenderer = new UnifiedRenderer('main');
+
+// Load fonts
+await unifiedRenderer.loadFonts(['simsun', 'arial']);
+
+// Render using main thread
+let mtextObject = await unifiedRenderer.renderMText(
+  mtextContent,
+  textStyle,
+  { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
+);
+
+scene.add(mtextObject);
+
+// Switch to worker mode for heavy rendering tasks
+unifiedRenderer.switchMode('worker');
+
+// Re-load fonts in workers
+await unifiedRenderer.loadFonts(['simsun', 'arial']);
+
+// Render using workers
+mtextObject = await unifiedRenderer.renderMText(
+  heavyMtextContent,
+  textStyle,
+  { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
+);
+
+scene.add(mtextObject);
+
+// Clean up
+unifiedRenderer.destroy();
+```
+
+### Performance Considerations
+
+**When to use MainThreadRenderer:**
+- Simple MText content with few characters
+- When you need immediate synchronous results
+- When worker overhead would be greater than rendering time
+
+**When to use WebWorkerRenderer:**
+- Large amounts of MText content
+- Complex text with many formatting codes
+- When you want to keep the main thread responsive
+- Batch processing of multiple MText objects
+
+**When to use UnifiedRenderer:**
+- Applications that need to switch rendering strategies dynamically
+- When rendering requirements vary based on content complexity
+- Development environments where you want to test both approaches
 
 If all of fonts or certain fonts are not needed any more after rendering, you can call method `release` of class `FontManager` to free memory occupied by them. Based on testing, one Chinese mesh font file may take 40M memory.
 

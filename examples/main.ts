@@ -479,7 +479,7 @@ class MTextRendererExample {
         // Create a group to hold all MText objects
         const group = new THREE.Group();
         let combinedBox: THREE.Box3 | null = null;
-        
+
         mtextObjects.forEach((mtextObj, index) => {
           group.add(mtextObj);
 
@@ -493,11 +493,7 @@ class MTextRendererExample {
           }
 
           // Add bounding boxes if enabled
-          if (
-            this.showBoundingBoxCheckbox.checked &&
-            mtextObj.box &&
-            !mtextObj.box.isEmpty()
-          ) {
+          if (this.showBoundingBoxCheckbox.checked && mtextObj.box && !mtextObj.box.isEmpty()) {
             const box = this.createMTextBox(
               mtextObj.box,
               new THREE.Vector3(

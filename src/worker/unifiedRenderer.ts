@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { MTextData, TextStyle, ColorSettings } from '../renderer/types';
 import { WebWorkerRenderer } from './webWorkerRenderer';
 import { MainThreadRenderer } from './mainThreadRenderer';

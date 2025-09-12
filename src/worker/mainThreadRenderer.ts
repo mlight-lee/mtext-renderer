@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { MText } from '../renderer/mtext';
 import { FontManager } from '../font';
 import { StyleManager } from '../renderer/styleManager';

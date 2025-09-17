@@ -38,40 +38,18 @@ jobs:
       - name: Build the package
         run: pnpm build
 
-      - name: Build example page
-        run: pnpm build:example
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './example/dist'
 
   deploy:
     needs: [ci]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 9
-      
-      # Cache node_modules
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          cache: 'pnpm'
-       
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-    
-      - name: Build example page
-        run: pnpm build:example
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './examples/'
 
       - name: Deploy to GitHub Pages
         id: deployment

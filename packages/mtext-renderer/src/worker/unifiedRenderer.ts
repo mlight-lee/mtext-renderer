@@ -1,7 +1,7 @@
 import { ColorSettings,MTextData, TextStyle } from '../renderer/types';
 import { MTextBaseRenderer, MTextObject } from './baseRenderer';
 import { MainThreadRenderer } from './mainThreadRenderer';
-import { WebWorkerRenderer } from './webWorkerRenderer';
+import { WebWorkerRenderer, WebWorkerRendererConfig } from './webWorkerRenderer';
 
 export type RenderMode = 'main' | 'worker';
 
@@ -19,15 +19,17 @@ export class UnifiedRenderer {
     this.mainThreadRenderer = new MainThreadRenderer();
     this.adapter = this.mainThreadRenderer;
     if (mode === 'worker') {
-      this.workerManager = new WebWorkerRenderer();
+      this.workerManager = new WebWorkerRenderer({});
       this.adapter = this.workerManager;
     }
   }
 
   /**
    * Switch between main thread and worker rendering modes
+   * @param mode The rendering mode to switch to
+   * @param workerConfig Configuration options for WebWorkerRenderer when switching to worker mode
    */
-  switchMode(mode: RenderMode): void {
+  switchMode(mode: RenderMode, workerConfig?: WebWorkerRendererConfig): void {
     if (this.currentMode === mode) {
       return; // Already in the requested mode
     }
@@ -42,7 +44,7 @@ export class UnifiedRenderer {
 
     // Initialize new mode
     if (mode === 'worker') {
-      this.workerManager = new WebWorkerRenderer();
+      this.workerManager = new WebWorkerRenderer(workerConfig || {});
       this.adapter = this.workerManager;
     } else {
       this.adapter = this.mainThreadRenderer;

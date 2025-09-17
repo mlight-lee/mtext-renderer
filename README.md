@@ -405,7 +405,7 @@ scene.add(mtextObject);
 import { WebWorkerRenderer } from '@mlightcad/mtext-renderer';
 
 // Create worker renderer with custom pool size
-const workerRenderer = new WebWorkerRenderer(4); // 4 workers
+const workerRenderer = new WebWorkerRenderer({ poolSize: 4 }); // 4 workers
 
 // Load fonts in all workers
 await workerRenderer.loadFonts(['simsun', 'arial']);

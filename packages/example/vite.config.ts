@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 export default defineConfig({
+  base: './',
   build: {
     outDir: resolve(__dirname, 'dist'),
     sourcemap: true,
@@ -17,9 +18,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['three']
-  },
-  worker: {
-    format: 'es'
   },
   plugins: [
     viteStaticCopy({

@@ -3,6 +3,23 @@ import * as THREE from 'three';
 import { ColorSettings,MTextData, TextStyle } from '../renderer/types';
 import { MTextBaseRenderer, MTextObject } from './baseRenderer';
 
+/**
+ * Configuration options for WebWorkerRenderer
+ */
+export interface WebWorkerRendererConfig {
+  /**
+   * Number of worker instances to create in the pool
+   * @default Math.max(1, Math.min(4, navigator.hardwareConcurrency || 2))
+   */
+  poolSize?: number;
+  
+  /**
+   * URL path to the worker script
+   * @default '/assets/mtext-renderer-worker.js'
+   */
+  workerUrl?: string;
+}
+
 // Worker message types
 interface WorkerMessage {
   type: 'render' | 'loadFonts' | 'getAvailableFonts';
@@ -86,14 +103,14 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   private poolSize: number;
   private readyPromise: Promise<void> | null = null;
 
-  constructor(
-    poolSize: number = Math.max(
+  constructor(config: WebWorkerRendererConfig = {}) {
+    // Apply default values
+    this.poolSize = config.poolSize ?? Math.max(
       1,
       navigator.hardwareConcurrency ? Math.min(4, navigator.hardwareConcurrency) : 2
-    ),
-    workerUrl = '/assets/mtext-renderer-worker.js'
-  ) {
-    this.poolSize = poolSize;
+    );
+    const workerUrl = config.workerUrl ?? '/assets/mtext-renderer-worker.js';
+
     for (let i = 0; i < this.poolSize; i++) {
       const worker = new Worker(new URL(workerUrl, import.meta.url), { type: 'module' });
       this.attachWorkerHandlers(worker, i);

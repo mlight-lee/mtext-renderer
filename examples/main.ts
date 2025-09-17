@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { UnifiedRenderer, RenderMode } from '../src/worker';
-import { MTextData, TextStyle } from '../src/renderer/types';
-import { MTextObject } from '../src/worker/baseRenderer';
+import { MTextObject, UnifiedRenderer, RenderMode } from '../src/worker';
+import { MTextData, TextStyle } from '../src/renderer';
 
 class MTextRendererExample {
   private scene: THREE.Scene;

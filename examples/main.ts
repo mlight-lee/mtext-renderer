@@ -77,7 +77,7 @@ class MTextRendererExample {
     this.controls.maxPolarAngle = Math.PI / 2;
 
     // Initialize unified renderer (default to main thread)
-    this.unifiedRenderer = new UnifiedRenderer('main');
+    this.unifiedRenderer = new UnifiedRenderer('main', '/dist/assets/mtext-renderer-worker.js');
 
     // Get DOM elements
     this.mtextInput = document.getElementById('mtext-input') as HTMLTextAreaElement;

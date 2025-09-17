@@ -12,7 +12,16 @@ export default defineConfig({
       formats: ['es', 'umd']
     },
     rollupOptions: {
-      external: ['three'],
+      // Exclude dependencies and the web worker entry from the main bundle
+      external: (id) => {
+        if (id === 'three') return true;
+        // Do not bundle the worker in the main build; it's built by a separate config
+        // Handle both POSIX and Windows paths
+        return (
+          id.endsWith('/src/worker/mtextWorker.ts') ||
+          id.endsWith('\\src\\worker\\mtextWorker.ts')
+        );
+      },
       output: {
         globals: {
           three: 'THREE'

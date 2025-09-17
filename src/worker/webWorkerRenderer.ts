@@ -89,11 +89,12 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     poolSize: number = Math.max(
       1,
       navigator.hardwareConcurrency ? Math.min(4, navigator.hardwareConcurrency) : 2
-    )
+    ),
+    workerUrl = './assets/mtext-renderer-worker.js'
   ) {
     this.poolSize = poolSize;
     for (let i = 0; i < this.poolSize; i++) {
-      const worker = new Worker(new URL('./mtextWorker.ts', import.meta.url), { type: 'module' });
+      const worker = new Worker(new URL(workerUrl, import.meta.url), { type: 'module' });
       this.attachWorkerHandlers(worker, i);
       this.workers.push(worker);
       this.inFlightPerWorker.push(0);

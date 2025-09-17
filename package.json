@@ -12,8 +12,10 @@
     "package.json"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build -c vite.config.main.ts && vite build -c vite.config.worker.ts",
     "build:example": "vite build --config examples/vite.config.ts",
+    "build:main": "vite build -c vite.config.main.ts",
+    "build:worker": "vite build -c vite.config.worker.ts",
     "example": "npm run build:example && vite --config examples/vite.config.ts",
     "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" \"examples/**/*.{ts,tsx,js,jsx}\"",
     "lint:fix": "eslint \"src/**/*.{ts,tsx,js,jsx}\" \"examples/**/*.{ts,tsx,js,jsx}\" --fix",
@@ -48,7 +50,8 @@
     "prettier": "^3.1.1",
     "typescript": "~5.3.3",
     "vite": "^5.0.0",
-    "vite-plugin-dts": "^3.7.0"
+    "vite-plugin-dts": "^3.7.0",
+    "vite-plugin-static-copy": "^3.1.1"
   },
   "peerDependencies": {
     "three": "^0.172.0"

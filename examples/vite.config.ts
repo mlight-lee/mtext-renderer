@@ -1,17 +1,14 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
-  server: {
-    open: '/examples/index.html',
-    port: 3000,
-  },
   build: {
     outDir: resolve(__dirname, 'dist'),
     sourcemap: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'main.ts'),
+        index: resolve(__dirname, 'index.html'),
       },
       output: {
         format: 'es',
@@ -24,4 +21,14 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  plugins: [
+    viteStaticCopy({
+      targets: [
+        {
+          src: './dist/mtext-renderer-worker.js',
+          dest: 'assets'
+        }
+      ]
+    })
+  ]
 });

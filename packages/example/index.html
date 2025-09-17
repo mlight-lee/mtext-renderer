@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MText Renderer Example</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background: #f0f0f0;
+        }
+        #controls {
+            width: 800px;
+            background: #333;
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        #render-area {
+            width: 800px;
+            height: 600px;
+            position: relative;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background: white;
+        }
+        canvas { 
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #mtext-input {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 5px;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 50px;
+            max-height: 300px;
+        }
+        select {
+            width: 100%;
+            padding: 5px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 5px 10px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        #status {
+            margin-top: 10px;
+            color: #ff0;
+        }
+        h2 {
+            margin-top: 0;
+            color: #fff;
+        }
+        .checkbox-container {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-container input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .examples {
+            margin: 10px 0;
+        }
+        .example-btn {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .example-btn:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h2>MText Renderer Example</h2>
+        <label for="font-select">Default Font:</label>
+        <select id="font-select">
+            <option value="simkai">simkai</option>
+        </select>
+        <label for="render-mode">Render Mode:</label>
+        <select id="render-mode">
+            <option value="main">Main Thread</option>
+            <option value="worker">Web Worker</option>
+        </select>
+        <label for="mtext-input">MText:</label>
+        <textarea id="mtext-input" placeholder="Enter MText content here... (Special characters: %%c=Ø, %%d=°, %%p=±)">{\C1;Hello World}\P{\C2;This is a test}\P{\C3;MText Renderer}</textarea>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="render-btn">Render</button>
+            <div class="checkbox-container" style="margin: 0;">
+                <input type="checkbox" id="show-bounding-box" checked>
+                <label for="show-bounding-box">Show Bounding Box</label>
+            </div>
+        </div>
+        <div class="examples">
+            <h3>Example Texts:</h3>
+            <button class="example-btn" data-example="basic">Basic</button>
+            <button class="example-btn" data-example="complex">Complex</button>
+            <button class="example-btn" data-example="color">Color</button>
+            <button class="example-btn" data-example="font">Font</button>
+            <button class="example-btn" data-example="alignment">Alignment</button>
+            <button class="example-btn" data-example="paragraph">Paragraph</button>
+            <button class="example-btn" data-example="stacking">Stacking</button>
+            <button class="example-btn" data-example="multiple">Multiple MText</button>
+        </div>
+        <div id="status"></div>
+    </div>
+    <div id="render-area"></div>
+    <!-- Load bundled example -->
+    <script type="module" src="./src/main.ts"></script>
+</body>
+</html> 

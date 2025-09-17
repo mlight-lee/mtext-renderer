@@ -1,51 +1,58 @@
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
-import prettier from 'eslint-plugin-prettier';
+import globals from 'globals'
+import jsLint from '@eslint/js'
+import tsLint from 'typescript-eslint'
+import eslintConfigPrettier from 'eslint-config-prettier'
+import pluginSimpleImportSort from 'eslint-plugin-simple-import-sort'
 
 export default [
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ["**/*.{js,mjs,cjs,ts,mts,jsx,tsx}"],
     languageOptions: {
-      parser: tsparser,
+      // common parser options, enable TypeScript and JSX
+      parser: "@typescript-eslint/parser",
       parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: process.cwd(),
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-      'prettier': prettier,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-floating-promises': 'error',
-      'prettier/prettier': 'error',
-    },
+        sourceType: "module"
+      }
+    }
+  },
+  { 
+    languageOptions: { 
+      globals: { 
+        ...globals.browser,
+      } 
+    }
   },
   {
-    files: ['examples/**/*.{ts,tsx}'],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        project: './tsconfig.examples.json',
-        tsconfigRootDir: process.cwd(),
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-    },
     plugins: {
-      '@typescript-eslint': tseslint,
-      'prettier': prettier,
+      // key "simple-import-sort" is the plugin namespace
+      "simple-import-sort": pluginSimpleImportSort
     },
     rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-floating-promises': 'error',
-      'prettier/prettier': 'error',
-    },
+      "simple-import-sort/imports": [
+        "error"
+      ]
+    }
   },
+  jsLint.configs.recommended,
+  ...tsLint.configs.recommended,
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['node_modules', 'dist', 'public', '.nuxt']
   },
-]; 
+  eslintConfigPrettier,
+  {
+    rules: {
+      "@typescript-eslint/no-empty-object-type": ["off"],
+      "@typescript-eslint/no-unused-expressions": ["off"],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          args: 'none',
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_'
+        }
+      ],
+      'quotes': ['error', 'single']
+    }
+  }
+]

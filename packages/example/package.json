@@ -1,0 +1,24 @@
+{
+  "name": "@mlightcad/mtext-renderer-example",
+  "private": true,
+  "version": "0.0.1",
+  "description": "AutoCAD MText renderer example",
+  "type": "module",
+  "license": "MIT",
+  "author": "MLight Lee <mlight.lee@outlook.com>",
+  "scripts": {
+    "build": "vite build",
+    "clean": "rimraf dist lib tsconfig.tsbuildinfo",
+    "dev": "vite",
+    "lint": "eslint src/",
+    "lint:fix": "eslint --fix --quiet src/",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mlightcad/mtext-renderer": "workspace:*",
+    "three": "^0.172.0"
+  },
+  "devDependencies": {
+    "vite-plugin-static-copy": "^3.1.1"
+  }
+}

@@ -15,7 +15,7 @@ export interface WebWorkerRendererConfig {
   
   /**
    * URL path to the worker script
-   * @default '/assets/mtext-renderer-worker.js'
+   * @default './mtext-renderer-worker.js'
    */
   workerUrl?: string;
 }
@@ -109,7 +109,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
       1,
       navigator.hardwareConcurrency ? Math.min(4, navigator.hardwareConcurrency) : 2
     );
-    const workerUrl = config.workerUrl ?? '/assets/mtext-renderer-worker.js';
+    const workerUrl = config.workerUrl ?? './mtext-renderer-worker.js';
 
     for (let i = 0; i < this.poolSize; i++) {
       const worker = new Worker(new URL(workerUrl, import.meta.url), { type: 'module' });

@@ -219,7 +219,7 @@ class MTextRendererExample {
     // Render mode toggle
     this.renderModeSelect.addEventListener('change', async () => {
       const mode = this.renderModeSelect.value as RenderMode;
-      this.unifiedRenderer.switchMode(mode, { workerUrl: '/assets/mtext-renderer-worker.js' });
+      this.unifiedRenderer.switchMode(mode, { workerUrl: './mtext-renderer-worker.js' });
 
       try {
         // Ensure required fonts are available in the new mode

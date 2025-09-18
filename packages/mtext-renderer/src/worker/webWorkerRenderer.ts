@@ -18,6 +18,12 @@ export interface WebWorkerRendererConfig {
    * @default './mtext-renderer-worker.js'
    */
   workerUrl?: string
+  /**
+   * The flag indicate whether to load required fonts on demand
+   *
+   * @default false
+   */
+  isLoadFontsOnDemand?: boolean
 }
 
 // Worker message types
@@ -100,9 +106,10 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   > = new Map()
   private requestId = 0
   private poolSize: number
+  private isLoadFontsOnDemand: boolean
   private readyPromise: Promise<void> | null = null
 
-  constructor(config: WebWorkerRendererConfig = {}) {
+  constructor(config: WebWorkerRendererConfig = { isLoadFontsOnDemand: true }) {
     // Apply default values
     this.poolSize =
       config.poolSize ??
@@ -112,6 +119,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
           ? Math.min(4, navigator.hardwareConcurrency)
           : 2
       )
+    this.isLoadFontsOnDemand = !!config.isLoadFontsOnDemand
     const workerUrl = config.workerUrl ?? './mtext-renderer-worker.js'
 
     for (let i = 0; i < this.poolSize; i++) {
@@ -260,7 +268,8 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     const serialized = await this.sendMessage<SerializedMText>('render', {
       mtextContent,
       textStyle,
-      colorSettings
+      colorSettings,
+      isLoadFontsOnDemand: this.isLoadFontsOnDemand
     })
     return this.reconstructMText(serialized)
   }

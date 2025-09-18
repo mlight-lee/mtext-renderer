@@ -165,6 +165,9 @@ Main class for rendering AutoCAD MText content. Extends THREE.Object3D to integr
 - `fontManager`: Reference to FontManager instance for font operations
 - `styleManager`: Reference to StyleManager instance for style operations
 
+**Public Methods:**
+- `draw()`: Asynchronously builds geometry and loads required fonts on demand
+
 ## Class Diagram
 
 ```mermaid
@@ -328,7 +331,7 @@ import { FontManager, MText, StyleManager } from '@mlightcad/mtext-renderer';
 const fontManager = FontManager.instance;
 const styleManager = new StyleManager();
 
-// Preload a font
+// Optionally preload a font (otherwise MText will load on demand in draw())
 await fontManager.loadFontsByNames(['simsun']);
 
 // Create MText content
@@ -357,6 +360,9 @@ const mtext = new MText(
   styleManager,
   fontManager
 );
+
+// Build geometry and load fonts on demand
+await mtext.draw();
 
 // Add to Three.js scene
 scene.add(mtext);

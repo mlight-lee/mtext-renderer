@@ -38,6 +38,7 @@ export class MainThreadRenderer implements MTextBaseRenderer {
       this.fontManager,
       colorSettings
     )
+    await mtext.draw()
     mtext.updateMatrixWorld(true)
     return mtext as MTextObject
   }

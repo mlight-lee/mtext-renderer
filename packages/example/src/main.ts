@@ -198,30 +198,6 @@ class MTextRendererExample {
           } else {
             // For regular examples, update textarea and render
             this.mtextInput.value = content
-
-            // Get required fonts from the MText content
-            const requiredFonts = Array.from(
-              this.getFontsFromMText(content, true)
-            )
-            if (requiredFonts.length > 0) {
-              try {
-                // Show loading status
-                this.statusDiv.textContent = `Loading fonts: ${requiredFonts.join(', ')}...`
-                this.statusDiv.style.color = '#ffa500'
-
-                // Load the required fonts
-                await this.unifiedRenderer.loadFonts(requiredFonts)
-
-                // Update status
-                this.statusDiv.textContent = 'Fonts loaded successfully'
-                this.statusDiv.style.color = '#0f0'
-              } catch (error) {
-                console.error('Error loading fonts:', error)
-                this.statusDiv.textContent = `Error loading fonts: ${requiredFonts.join(', ')}`
-                this.statusDiv.style.color = '#f00'
-              }
-            }
-
             await this.renderMText(content)
           }
         }
@@ -241,28 +217,8 @@ class MTextRendererExample {
       this.unifiedRenderer.switchMode(mode, {
         workerUrl: './mtext-renderer-worker.js'
       })
-
-      try {
-        // Ensure required fonts are available in the new mode
-        const currentContent = this.mtextInput.value
-        const requiredFonts = new Set<string>()
-        // From dropdown
-        if (this.fontSelect.value) requiredFonts.add(this.fontSelect.value)
-        // From MText content
-        this.getFontsFromMText(currentContent, true).forEach(f =>
-          requiredFonts.add(f)
-        )
-        if (requiredFonts.size > 0) {
-          await this.unifiedRenderer.loadFonts(Array.from(requiredFonts))
-        }
-
-        this.statusDiv.textContent = `Switched to ${mode} thread rendering`
-        this.statusDiv.style.color = '#0f0'
-      } catch (e) {
-        console.error('Error preparing fonts after mode switch:', e)
-        this.statusDiv.textContent = `Switched to ${mode} thread (font prep failed)`
-        this.statusDiv.style.color = '#ffa500'
-      }
+      this.statusDiv.textContent = `Switched to ${mode} thread rendering`
+      this.statusDiv.style.color = '#0f0'
 
       // Re-render with current content to reflect the new mode
       await this.renderMText(this.mtextInput.value)

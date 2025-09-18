@@ -45,6 +45,8 @@ export class MText extends THREE.Object3D {
   private _box: THREE.Box3
   /** Array of bounding boxes for individual text elements */
   private _boxes: THREE.Box3[]
+  /** Raw mtext data to draw on demand */
+  private _mtextData: MTextData
 
   /**
    * Extracts all unique font names used in an MText string.
@@ -93,12 +95,7 @@ export class MText extends THREE.Object3D {
     }
     this._box = new THREE.Box3()
     this._boxes = []
-    const obj = this.loadMText(text, style)
-    if (obj) {
-      this.getBoxes(obj, this._boxes)
-      this._boxes.forEach(box => this.box.union(box))
-      this.add(obj)
-    }
+    this._mtextData = text
   }
 
   /**
@@ -107,6 +104,27 @@ export class MText extends THREE.Object3D {
    */
   get fontManager() {
     return this._fontManager
+  }
+
+  /**
+   * Draw the MText object. This method loads required fonts on demand and builds the object graph.
+   *
+   * @param isLoadFontsOnDemand - The flag indicate whether to load required fonts on demand
+   */
+  async draw(isLoadFontsOnDemand = true) {
+    if (isLoadFontsOnDemand) {
+      // Determine fonts used in the mtext string (without extensions)
+      const fonts = Array.from(MText.getFonts(this._mtextData.text || '', true))
+      if (fonts.length > 0) {
+        await this._fontManager.loadFontsByNames(fonts)
+      }
+    }
+    const obj = this.loadMText(this._mtextData, this._style)
+    if (obj) {
+      this.getBoxes(obj, this._boxes)
+      this._boxes.forEach(box => this.box.union(box))
+      this.add(obj)
+    }
   }
 
   /**

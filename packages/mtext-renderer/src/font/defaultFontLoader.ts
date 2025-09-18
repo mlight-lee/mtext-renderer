@@ -59,7 +59,6 @@ export class DefaultFontLoader implements FontLoader {
   async load(fontNames: string[]) {
     if (fontNames.length == 0) {
       await this.getAvaiableFonts()
-      return []
     }
 
     const urls: string[] = []

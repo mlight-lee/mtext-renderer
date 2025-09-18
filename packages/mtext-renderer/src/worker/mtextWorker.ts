@@ -14,6 +14,7 @@ interface WorkerMessage {
     textStyle?: unknown
     colorSettings?: unknown
     fonts?: string[]
+    isLoadFontsOnDemand?: boolean
   }
 }
 
@@ -40,11 +41,13 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
     switch (type) {
       case 'render': {
         if (!data) throw new Error('Missing data for render message')
-        const { mtextContent, textStyle, colorSettings } = data as {
-          mtextContent: MTextData
-          textStyle: TextStyle
-          colorSettings: ColorSettings
-        }
+        const { mtextContent, textStyle, colorSettings, isLoadFontsOnDemand } =
+          data as {
+            mtextContent: MTextData
+            textStyle: TextStyle
+            colorSettings: ColorSettings
+            isLoadFontsOnDemand: boolean
+          }
 
         // Create MText instance and draw (loads fonts on demand)
         const mtext = new MText(
@@ -54,6 +57,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
           fontManager,
           colorSettings
         )
+        await mtext.draw(isLoadFontsOnDemand)
         mtext.updateMatrixWorld(true)
 
         // Serialize the MText object for transfer with transferable objects

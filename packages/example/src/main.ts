@@ -561,28 +561,6 @@ class MTextRendererExample {
     }
   }
 
-  /**
-   * Extract font names from MText content (simplified version)
-   */
-  private getFontsFromMText(
-    mtext: string,
-    removeExtension: boolean = false
-  ): Set<string> {
-    const fonts = new Set<string>()
-    const fontRegex = /\\f([^\\|;]+)/gi
-    let match
-
-    while ((match = fontRegex.exec(mtext)) !== null) {
-      let fontName = match[1].toLowerCase()
-      if (removeExtension) {
-        fontName = fontName.replace(/\.(ttf|otf|shx)$/i, '')
-      }
-      fonts.add(fontName)
-    }
-
-    return fonts
-  }
-
   private animate(): void {
     requestAnimationFrame(() => this.animate())
     this.controls.update()

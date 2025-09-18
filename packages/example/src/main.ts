@@ -106,7 +106,7 @@ class MTextRendererExample {
     this.setupEventListeners()
 
     // Initialize fonts and UI, then render
-    this.initializeFonts()
+    this.initializeFonts(true)
       .then(() => {
         // Initial render after fonts are loaded
         void this.renderMText(this.mtextInput.value)
@@ -158,27 +158,9 @@ class MTextRendererExample {
     // Font selection
     this.fontSelect.addEventListener('change', async () => {
       const content = this.mtextInput.value
-      const selectedFont = this.fontSelect.value
 
-      try {
-        // Show loading status
-        this.statusDiv.textContent = `Loading font ${selectedFont}...`
-        this.statusDiv.style.color = '#ffa500'
-
-        // Load the selected font
-        await this.unifiedRenderer.loadFonts([selectedFont])
-
-        // Re-render MText with new font
-        await this.renderMText(content)
-
-        // Update status
-        this.statusDiv.textContent = `Font changed to ${selectedFont}`
-        this.statusDiv.style.color = '#0f0'
-      } catch (error) {
-        console.error('Error loading font:', error)
-        this.statusDiv.textContent = `Error loading font ${selectedFont}`
-        this.statusDiv.style.color = '#f00'
-      }
+      // Re-render MText with new font
+      await this.renderMText(content)
     })
 
     // Example buttons
@@ -220,35 +202,40 @@ class MTextRendererExample {
       this.statusDiv.textContent = `Switched to ${mode} thread rendering`
       this.statusDiv.style.color = '#0f0'
 
+      // Call this function to guarantee default font is loaded 
+      await this.initializeFonts(false)
+
       // Re-render with current content to reflect the new mode
       await this.renderMText(this.mtextInput.value)
     })
   }
 
-  private async initializeFonts(): Promise<void> {
+  private async initializeFonts(isResetAvaiableFonts = true): Promise<void> {
     try {
-      // Load available fonts for the dropdown
-      const result = await this.unifiedRenderer.getAvailableFonts()
-      const fonts = result.fonts
+      if (isResetAvaiableFonts) {
+        // Load available fonts for the dropdown
+        const result = await this.unifiedRenderer.getAvailableFonts()
+        const fonts = result.fonts
+
+        // Clear existing options
+        this.fontSelect.innerHTML = ''
+
+        // Add all available fonts to dropdown
+        fonts.forEach(font => {
+          const option = document.createElement('option')
+          option.value = font.name[0]
+          option.textContent = font.name[0] // Use the first name from the array
+          // Set selected if this is the default font
+          if (font.name[0] === 'simkai') {
+            option.selected = true
+          }
+          this.fontSelect.appendChild(option)
+        })
+      }
 
       // Load default fonts
-      await this.unifiedRenderer.loadFonts(['simkai'])
-
-      // Clear existing options
-      this.fontSelect.innerHTML = ''
-
-      // Add all available fonts to dropdown
-      fonts.forEach(font => {
-        const option = document.createElement('option')
-        option.value = font.name[0]
-        option.textContent = font.name[0] // Use the first name from the array
-        // Set selected if this is the default font
-        if (font.name[0] === 'simkai') {
-          option.selected = true
-        }
-        this.fontSelect.appendChild(option)
-      })
-
+      const selectedFont = this.fontSelect.value
+      await this.unifiedRenderer.loadFonts([selectedFont])
       this.statusDiv.textContent = 'Fonts loaded successfully'
       this.statusDiv.style.color = '#0f0'
     } catch (error) {

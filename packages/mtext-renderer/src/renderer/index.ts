@@ -1,3 +1,3 @@
-export * from './mtext';
-export * from './styleManager';
-export * from './types';
+export * from './mtext'
+export * from './styleManager'
+export * from './types'

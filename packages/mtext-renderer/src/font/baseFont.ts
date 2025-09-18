@@ -1,6 +1,6 @@
-import { BaseTextShape } from './baseTextShape';
-import { CharGeometryCache } from './charGeometryCache';
-import { FontType } from './font';
+import { BaseTextShape } from './baseTextShape'
+import { CharGeometryCache } from './charGeometryCache'
+import { FontType } from './font'
 
 /**
  * Abstract base class for font implementations.
@@ -9,19 +9,19 @@ import { FontType } from './font';
  */
 export abstract class BaseFont {
   /** The type of font (shx or mesh) */
-  public abstract readonly type: FontType;
+  public abstract readonly type: FontType
   /**
    * The parsed font data. Different types of fonts have different data structures.
    * This data is used to render characters and calculate metrics.
    */
-  public abstract readonly data: unknown;
+  public abstract readonly data: unknown
   /**
    * Caching of font character geometries to improve text rendering performance.
    */
-  public cache: CharGeometryCache;
+  public cache: CharGeometryCache
 
   constructor() {
-    this.cache = new CharGeometryCache();
+    this.cache = new CharGeometryCache()
   }
 
   /**
@@ -29,14 +29,14 @@ export abstract class BaseFont {
    * @param char - The character to check
    * @returns True if this font contains glyph of the specified character. Otherwise, return false.
    */
-  abstract hasChar(char: string): boolean;
+  abstract hasChar(char: string): boolean
 
   /**
    * Record of characters that are not supported by this font.
    * Maps character strings to their occurrence count.
    * Used for tracking and reporting unsupported characters.
    */
-  public unsupportedChars: Record<string, number> = {};
+  public unsupportedChars: Record<string, number> = {}
 
   /**
    * Gets the shape data for a specific character at a given size.
@@ -44,21 +44,21 @@ export abstract class BaseFont {
    * @param size - The desired size of the character
    * @returns The shape data for the character, or undefined if not found
    */
-  abstract getCharShape(char: string, size: number): BaseTextShape | undefined;
+  abstract getCharShape(char: string, size: number): BaseTextShape | undefined
 
   /**
    * Gets the scale factor for this font.
    * This is used to adjust the size of characters when rendering.
    * @returns The scale factor as a number
    */
-  abstract getScaleFactor(): number;
+  abstract getScaleFactor(): number
 
   /**
    * Gets the shape to display when a character is not found in the font.
    * @param size - The desired size of the not found shape
    * @returns The shape data for the not found indicator, or undefined if not available
    */
-  abstract getNotFoundTextShape(size: number): BaseTextShape | undefined;
+  abstract getNotFoundTextShape(size: number): BaseTextShape | undefined
 
   /**
    * Records an unsupported character in the font.
@@ -67,8 +67,8 @@ export abstract class BaseFont {
    */
   protected addUnsupportedChar(char: string) {
     if (!this.unsupportedChars[char]) {
-      this.unsupportedChars[char] = 0;
+      this.unsupportedChars[char] = 0
     }
-    this.unsupportedChars[char]++;
+    this.unsupportedChars[char]++
   }
 }

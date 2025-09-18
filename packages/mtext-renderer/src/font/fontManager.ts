@@ -1,12 +1,17 @@
-import * as THREE from 'three';
+import * as THREE from 'three'
 
-import { FontCacheManager } from '../cache';
-import { EventManager, getFileName, getFileNameWithoutExtension } from '../common';
-import { BaseFont } from './baseFont';
-import { BaseTextShape } from './baseTextShape';
-import { FontType } from './font';
-import { FontFactory } from './fontFactory';
-import { FontLoadStatus } from './fontLoader';
+import { FontCacheManager } from '../cache'
+import {
+  EventManager,
+  getFileName,
+  getFileNameWithoutExtension
+} from '../common'
+import { BaseFont } from './baseFont'
+import { BaseTextShape } from './baseTextShape'
+import { DefaultFontLoader } from './defaultFontLoader'
+import { FontType } from './font'
+import { FontFactory } from './fontFactory'
+import { FontLoader, FontLoadStatus } from './fontLoader'
 
 /**
  * Font mappings configuration.
@@ -14,16 +19,16 @@ import { FontLoadStatus } from './fontLoader';
  * - The key is the original font name
  * - The value is the mapped font name
  */
-export type FontMapping = Record<string, string>;
+export type FontMapping = Record<string, string>
 
 /**
  * Event arguments for font-related events.
  */
 export interface FontManagerEventArgs {
   /** Name of font which can't be found */
-  fontName: string;
+  fontName: string
   /** The number of characters which use this font. This is only used when the font is not found. */
-  count?: number;
+  count?: number
 }
 
 /**
@@ -35,36 +40,40 @@ export interface FontManagerEventArgs {
  * - Tracking unsupported characters and missed fonts
  */
 export class FontManager {
-  private static _instance: FontManager;
+  private static _instance: FontManager
   /** THREE.js file loader for loading font files */
-  private loader: THREE.FileLoader;
+  private loader: THREE.FileLoader
+  /** Font loader which can be swapped by users */
+  private fontLoader: FontLoader
   /** Mapping of original font names to their replacements */
-  protected fontMapping: FontMapping = {};
+  protected fontMapping: FontMapping = {}
   /** Map of loaded fonts, keyed by font name */
-  protected fontMap: Map<string, BaseFont> = new Map();
+  protected fontMap: Map<string, BaseFont> = new Map()
   /** List of font file names that have been loaded */
-  protected fileNames: string[];
+  protected fileNames: string[]
   /** Record of characters that are not supported by any loaded font */
-  public unsupportedChars: Record<string, number> = {};
+  public unsupportedChars: Record<string, number> = {}
   /** Record of fonts that were requested but not found */
-  public missedFonts: Record<string, number> = {};
+  public missedFonts: Record<string, number> = {}
   /** Flag to enable/disable font caching */
-  public enableFontCache = true;
+  public enableFontCache = true
   /** Default font to use when a requested font is not found */
-  public defaultFont = 'simsun';
+  public defaultFont = 'simsun'
 
   /** Event managers for font-related events */
   public readonly events = {
     /** Event triggered when a font cannot be found */
     fontNotFound: new EventManager<FontManagerEventArgs>(),
     /** Event triggered when a font is successfully loaded */
-    fontLoaded: new EventManager<FontManagerEventArgs>(),
-  };
+    fontLoaded: new EventManager<FontManagerEventArgs>()
+  }
 
   private constructor() {
-    this.loader = new THREE.FileLoader();
-    this.loader.setResponseType('arraybuffer');
-    this.fileNames = [];
+    this.loader = new THREE.FileLoader()
+    this.loader.setResponseType('arraybuffer')
+    this.fileNames = []
+    // Default font loader; users may replace this instance
+    this.fontLoader = new DefaultFontLoader()
   }
 
   /**
@@ -73,9 +82,9 @@ export class FontManager {
    */
   public static get instance(): FontManager {
     if (!FontManager._instance) {
-      FontManager._instance = new FontManager();
+      FontManager._instance = new FontManager()
     }
-    return FontManager._instance;
+    return FontManager._instance
   }
 
   /**
@@ -83,39 +92,67 @@ export class FontManager {
    * @param mapping - The font mapping to set
    */
   setFontMapping(mapping: FontMapping) {
-    this.fontMapping = mapping;
+    this.fontMapping = mapping
+  }
+
+  /**
+   * Sets the font loader
+   * @param fontLoader - The font loader to set
+   */
+  setFontLoader(fontLoader: FontLoader) {
+    this.fontLoader = fontLoader
+  }
+
+  /**
+   * Retrieves information about all available fonts in the system.
+   * Loads font metadata from a CDN if not already loaded.
+   * @returns Promise that resolves to an array of FontInfo objects
+   * @throws {Error} If font metadata cannot be loaded from the CDN
+   */
+  async getAvaiableFonts() {
+    return await this.fontLoader.getAvaiableFonts()
+  }
+
+  /**
+   * Loads the specified fonts from font names
+   * @param names - Font names to load.
+   * @returns Promise that resolves to an array of font load statuses
+   */
+  async loadFontsByNames(names: string | string[]) {
+    names = Array.isArray(names) ? names : [names]
+    return await this.fontLoader.load(names)
   }
 
   /**
    * Loads the specified fonts from URLs
-   * @param urls - URLs of font files to load. The order represents the priority
+   * @param urls - URLs of font files to load.
    * @returns Promise that resolves to an array of font load statuses
    */
-  async loadFonts(urls: string | string[]) {
-    urls = Array.isArray(urls) ? urls : [urls];
-    const promises: Promise<void>[] = [];
+  async loadFontsByUrls(urls: string | string[]) {
+    urls = Array.isArray(urls) ? urls : [urls]
+    const promises: Promise<void>[] = []
     for (let i = 0; i < urls.length; i++) {
-      const url = urls[i];
-      promises.push(this.loadFont(url));
+      const url = urls[i]
+      promises.push(this.loadFont(url))
     }
 
-    const status: FontLoadStatus[] = [];
-    await Promise.allSettled(promises).then((results) => {
+    const status: FontLoadStatus[] = []
+    await Promise.allSettled(promises).then(results => {
       results.forEach((result, index) => {
-        const isSuccess = result.status === 'fulfilled';
-        const url = urls[index];
-        const fontName = getFileNameWithoutExtension(url.toLowerCase());
+        const isSuccess = result.status === 'fulfilled'
+        const url = urls[index]
+        const fontName = getFileNameWithoutExtension(url.toLowerCase())
         status.push({
           fontName: fontName,
           url: url,
-          status: isSuccess,
-        });
+          status: isSuccess
+        })
         if (isSuccess) {
-          this.fileNames.push(fontName);
+          this.fileNames.push(fontName)
         }
-      });
-    });
-    return status;
+      })
+    })
+    return status
   }
 
   /**
@@ -124,15 +161,15 @@ export class FontManager {
    * @returns The original font name if found, or the replacement font name if not found
    */
   findAndReplaceFont(fontName: string) {
-    let font = this.fontMap.get(fontName.toLowerCase());
+    let font = this.fontMap.get(fontName.toLowerCase())
     if (font == null) {
-      const mappedFontName = this.fontMapping[fontName];
+      const mappedFontName = this.fontMapping[fontName]
       if (mappedFontName) {
-        font = this.fontMap.get(mappedFontName.toLowerCase());
-        return mappedFontName;
+        font = this.fontMap.get(mappedFontName.toLowerCase())
+        return mappedFontName
       }
     }
-    return font ? fontName : this.defaultFont;
+    return font ? fontName : this.defaultFont
   }
 
   /**
@@ -142,21 +179,24 @@ export class FontManager {
    * if the specified font name not found.
    * @returns The font with the specified font name, or undefined if not found
    */
-  public getFontByName(fontName: string, recordMissedFonts: boolean = true): BaseFont | undefined {
+  public getFontByName(
+    fontName: string,
+    recordMissedFonts: boolean = true
+  ): BaseFont | undefined {
     if (this.fontMap.size === 0) {
-      return;
+      return
     }
     if (fontName == null) {
-      fontName = ''; // take null/undefined as empty
+      fontName = '' // take null/undefined as empty
     }
-    const currentFont = this.fontMap.get(fontName.toLowerCase());
+    const currentFont = this.fontMap.get(fontName.toLowerCase())
     if (!currentFont) {
       if (recordMissedFonts) {
-        this.recordMissedFonts(fontName);
+        this.recordMissedFonts(fontName)
       }
-      return undefined;
+      return undefined
     }
-    return currentFont;
+    return currentFont
   }
 
   /**
@@ -170,10 +210,10 @@ export class FontManager {
     // Try all fonts until we find one that can render the character
     for (const [, font] of this.fontMap) {
       if (font.hasChar(char)) {
-        return font;
+        return font
       }
     }
-    return undefined;
+    return undefined
   }
 
   /**
@@ -183,12 +223,16 @@ export class FontManager {
    * @param size - The size of the character
    * @returns The text shape for the character, or undefined if not found
    */
-  public getCharShape(char: string, fontName: string, size: number): BaseTextShape | undefined {
-    let currentFont = this.getFontByName(fontName);
+  public getCharShape(
+    char: string,
+    fontName: string,
+    size: number
+  ): BaseTextShape | undefined {
+    let currentFont = this.getFontByName(fontName)
     if (!currentFont) {
-      currentFont = this.getFontByChar(char);
+      currentFont = this.getFontByChar(char)
     }
-    return currentFont?.getCharShape(char, size);
+    return currentFont?.getCharShape(char, size)
   }
 
   /**
@@ -197,8 +241,8 @@ export class FontManager {
    * @returns The scale factor for the font, or 1 if the font is not found
    */
   getFontScaleFactor(fontName: string) {
-    const font = this.fontMap.get(fontName.toLowerCase());
-    return font ? font.getScaleFactor() : 1;
+    const font = this.fontMap.get(fontName.toLowerCase())
+    return font ? font.getScaleFactor() : 1
   }
 
   /**
@@ -207,8 +251,8 @@ export class FontManager {
    * @returns The type of the font. If the specified font can't be found, `undefined` is returned
    */
   getFontType(fontName: string): FontType | undefined {
-    const font = this.fontMap.get(fontName.toLowerCase());
-    return font?.type;
+    const font = this.fontMap.get(fontName.toLowerCase())
+    return font?.type
   }
 
   /**
@@ -218,10 +262,10 @@ export class FontManager {
    */
   getNotFoundTextShape(size: number) {
     for (const [, font] of this.fontMap) {
-      const s = font.getNotFoundTextShape(size);
-      if (s) return s;
+      const s = font.getNotFoundTextShape(size)
+      if (s) return s
     }
-    return;
+    return
   }
 
   /**
@@ -230,7 +274,7 @@ export class FontManager {
    * @returns True if the font is loaded, false otherwise
    */
   isFontLoaded(fontName: string): boolean {
-    return this.fontMap.has(fontName.toLowerCase());
+    return this.fontMap.has(fontName.toLowerCase())
   }
 
   /**
@@ -240,13 +284,13 @@ export class FontManager {
   private recordMissedFonts(fontName: string) {
     if (fontName) {
       if (!this.missedFonts[fontName]) {
-        this.missedFonts[fontName] = 0;
+        this.missedFonts[fontName] = 0
       }
-      this.missedFonts[fontName]++;
+      this.missedFonts[fontName]++
       this.events.fontNotFound.dispatch({
         fontName: fontName,
-        count: this.missedFonts[fontName],
-      });
+        count: this.missedFonts[fontName]
+      })
     }
   }
 
@@ -255,35 +299,35 @@ export class FontManager {
    * @param url - The URL of the font file to load
    */
   private async loadFont(url: string) {
-    const fileName = getFileName(url);
+    const fileName = getFileName(url)
     if (!fileName) {
-      throw new Error(`Invalid font url: ${url}`);
+      throw new Error(`Invalid font url: ${url}`)
     }
 
-    const fontName = getFileNameWithoutExtension(url).toLowerCase();
-    const data = await FontCacheManager.instance.get(fontName);
+    const fontName = getFileNameWithoutExtension(url).toLowerCase()
+    const data = await FontCacheManager.instance.get(fontName)
 
     if (data) {
-      const font = FontFactory.instance.createFont(data);
-      this.fontMap.set(fontName, font);
+      const font = FontFactory.instance.createFont(data)
+      this.fontMap.set(fontName, font)
     } else {
-      const buffer = (await this.loader.loadAsync(url)) as ArrayBuffer;
-      const font = FontFactory.instance.createFontFromBuffer(fileName, buffer);
+      const buffer = (await this.loader.loadAsync(url)) as ArrayBuffer
+      const font = FontFactory.instance.createFontFromBuffer(fileName, buffer)
       if (font) {
-        this.fontMap.set(fontName, font);
+        this.fontMap.set(fontName, font)
         if (this.enableFontCache) {
           await FontCacheManager.instance.set(fontName, {
             name: fontName,
             type: font.type,
-            data: font.data,
-          });
+            data: font.data
+          })
         }
       }
     }
 
     this.events.fontLoaded.dispatch({
-      fontName: fontName,
-    });
+      fontName: fontName
+    })
   }
 
   /**
@@ -291,16 +335,16 @@ export class FontManager {
    */
   async getAllFontsFromCache() {
     if (this.fontMap.size !== 0) {
-      return;
+      return
     }
-    const fontFileDatas = await FontCacheManager.instance.getAll();
+    const fontFileDatas = await FontCacheManager.instance.getAll()
     for (const fontFileData of fontFileDatas) {
-      const { name } = fontFileData;
+      const { name } = fontFileData
       if (this.fileNames && !this.fileNames.includes(name)) {
-        continue;
+        continue
       }
-      const font = FontFactory.instance.createFont(fontFileData);
-      this.fontMap.set(name, font);
+      const font = FontFactory.instance.createFont(fontFileData)
+      this.fontMap.set(name, font)
     }
   }
 
@@ -310,9 +354,9 @@ export class FontManager {
    */
   public getUnsupportedChar() {
     for (const [, font] of this.fontMap) {
-      Object.assign(this.unsupportedChars, font.unsupportedChars);
+      Object.assign(this.unsupportedChars, font.unsupportedChars)
     }
-    return this.unsupportedChars;
+    return this.unsupportedChars
   }
 
   /**
@@ -329,10 +373,10 @@ export class FontManager {
    */
   release(fontToRelease?: string) {
     if (fontToRelease == null) {
-      this.fontMap.clear();
-      return true;
+      this.fontMap.clear()
+      return true
     } else {
-      return this.fontMap.delete(fontToRelease);
+      return this.fontMap.delete(fontToRelease)
     }
   }
 }

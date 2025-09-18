@@ -1,13 +1,13 @@
-import * as THREE from 'three';
+import * as THREE from 'three'
 
 /**
  * Manages caching of font character geometries to improve text rendering performance.
  */
 export class CharGeometryCache {
-  private cache: Map<string, THREE.BufferGeometry>;
+  private cache: Map<string, THREE.BufferGeometry>
 
   constructor() {
-    this.cache = new Map();
+    this.cache = new Map()
   }
 
   /**
@@ -19,8 +19,8 @@ export class CharGeometryCache {
    * Otherwise, returns false.
    */
   hasGeometry(char: string, size: number) {
-    const key = this.generateKey(char, size);
-    return this.cache.has(key);
+    const key = this.generateKey(char, size)
+    return this.cache.has(key)
   }
 
   /**
@@ -32,11 +32,11 @@ export class CharGeometryCache {
    * Return undefined if the character not found in cache.
    */
   getGeometry(char: string, size: number): THREE.BufferGeometry | undefined {
-    const key = this.generateKey(char, size);
+    const key = this.generateKey(char, size)
     if (this.cache.has(key)) {
-      return this.cache.get(key);
+      return this.cache.get(key)
     }
-    return undefined;
+    return undefined
   }
 
   /**
@@ -46,8 +46,8 @@ export class CharGeometryCache {
    * @param geometry The geometry to set.
    */
   setGeometry(char: string, size: number, geometry: THREE.BufferGeometry) {
-    const key = this.generateKey(char, size);
-    this.cache.set(key, geometry);
+    const key = this.generateKey(char, size)
+    this.cache.set(key, geometry)
   }
 
   /**
@@ -55,9 +55,9 @@ export class CharGeometryCache {
    */
   dispose(): void {
     for (const geom of this.cache.values()) {
-      geom.dispose();
+      geom.dispose()
     }
-    this.cache.clear();
+    this.cache.clear()
   }
 
   /**
@@ -66,6 +66,6 @@ export class CharGeometryCache {
    * @param size The font size.
    */
   private generateKey(char: string, size: number) {
-    return `${char}_${size}`;
+    return `${char}_${size}`
   }
 }

@@ -1,5 +1,5 @@
-import { FontInfo, FontLoader, FontLoadStatus } from './fontLoader';
-import { FontManager } from './fontManager';
+import { FontInfo, FontLoader, FontLoadStatus } from './fontLoader'
+import { FontManager } from './fontManager'
 
 /**
  * Default implementation of the FontLoader interface.
@@ -8,13 +8,13 @@ import { FontManager } from './fontManager';
  */
 export class DefaultFontLoader implements FontLoader {
   /** List of available fonts in the system */
-  private _avaiableFonts: FontInfo[];
+  private _avaiableFonts: FontInfo[]
 
   /**
    * Creates a new instance of DefaultFontLoader
    */
   constructor() {
-    this._avaiableFonts = [];
+    this._avaiableFonts = []
   }
 
   /**
@@ -22,7 +22,7 @@ export class DefaultFontLoader implements FontLoader {
    * @returns Array of FontInfo objects describing available fonts
    */
   get avaiableFonts() {
-    return this._avaiableFonts;
+    return this._avaiableFonts
   }
 
   /**
@@ -33,20 +33,20 @@ export class DefaultFontLoader implements FontLoader {
    */
   async getAvaiableFonts() {
     if (this._avaiableFonts.length == 0) {
-      const baseUrl = 'https://cdn.jsdelivr.net/gh/mlight-lee/cad-data/fonts/';
-      const fontMetaDataUrl = baseUrl + 'fonts.json';
+      const baseUrl = 'https://cdn.jsdelivr.net/gh/mlight-lee/cad-data/fonts/'
+      const fontMetaDataUrl = baseUrl + 'fonts.json'
       try {
-        const response = await fetch(fontMetaDataUrl);
-        this._avaiableFonts = (await response.json()) as FontInfo[];
+        const response = await fetch(fontMetaDataUrl)
+        this._avaiableFonts = (await response.json()) as FontInfo[]
       } catch {
-        throw new Error(`Filed to get avaiable font from '${fontMetaDataUrl}'`);
+        throw new Error(`Filed to get avaiable font from '${fontMetaDataUrl}'`)
       }
 
-      this._avaiableFonts.forEach((font) => {
-        font.url = baseUrl + font.file;
-      });
+      this._avaiableFonts.forEach(font => {
+        font.url = baseUrl + font.file
+      })
     }
-    return this._avaiableFonts;
+    return this._avaiableFonts
   }
 
   /**
@@ -58,56 +58,56 @@ export class DefaultFontLoader implements FontLoader {
    */
   async load(fontNames: string[]) {
     if (fontNames.length == 0) {
-      await this.getAvaiableFonts();
-      return [];
+      await this.getAvaiableFonts()
+      return []
     }
 
-    const urls: string[] = [];
-    const alreadyLoadedStatuses: FontLoadStatus[] = [];
-    const fontNameToUrl: Record<string, string> = {};
+    const urls: string[] = []
+    const alreadyLoadedStatuses: FontLoadStatus[] = []
+    const fontNameToUrl: Record<string, string> = {}
 
     // Build a map for quick lookup
-    this._avaiableFonts.forEach((font) => {
-      font.name.forEach((name) => {
-        fontNameToUrl[name.toLowerCase()] = font.url;
-      });
-    });
+    this._avaiableFonts.forEach(font => {
+      font.name.forEach(name => {
+        fontNameToUrl[name.toLowerCase()] = font.url
+      })
+    })
 
-    fontNames.forEach((font) => {
-      const lowerCaseFontName = font.toLowerCase();
-      const url = fontNameToUrl[lowerCaseFontName];
+    fontNames.forEach(font => {
+      const lowerCaseFontName = font.toLowerCase()
+      const url = fontNameToUrl[lowerCaseFontName]
       if (url) {
         if (FontManager.instance.isFontLoaded(lowerCaseFontName)) {
           alreadyLoadedStatuses.push({
             fontName: lowerCaseFontName,
             url,
-            status: true,
-          });
+            status: true
+          })
         } else {
-          urls.push(url);
+          urls.push(url)
         }
       }
-    });
+    })
 
-    let newlyLoadedStatuses: FontLoadStatus[] = [];
+    let newlyLoadedStatuses: FontLoadStatus[] = []
     if (urls.length > 0) {
-      newlyLoadedStatuses = await FontManager.instance.loadFonts(urls);
+      newlyLoadedStatuses = await FontManager.instance.loadFontsByUrls(urls)
     }
 
     // Merge and return statuses for all requested fonts, preserving order
-    const statusMap: Record<string, FontLoadStatus> = {};
-    [...alreadyLoadedStatuses, ...newlyLoadedStatuses].forEach((s) => {
-      statusMap[s.fontName] = s;
-    });
-    return fontNames.map((font) => {
-      const lowerCaseFontName = font.toLowerCase();
+    const statusMap: Record<string, FontLoadStatus> = {}
+    ;[...alreadyLoadedStatuses, ...newlyLoadedStatuses].forEach(s => {
+      statusMap[s.fontName] = s
+    })
+    return fontNames.map(font => {
+      const lowerCaseFontName = font.toLowerCase()
       return (
         statusMap[lowerCaseFontName] || {
           fontName: lowerCaseFontName,
           url: fontNameToUrl[lowerCaseFontName] || '',
-          status: false,
+          status: false
         }
-      );
-    });
+      )
+    })
   }
 }

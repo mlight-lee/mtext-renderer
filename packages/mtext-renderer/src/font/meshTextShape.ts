@@ -1,12 +1,12 @@
-import * as THREE from 'three';
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
-import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import * as THREE from 'three'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import { BaseTextShape } from './baseTextShape';
-import { MeshFont } from './meshFont';
-import { NormalComputationToggle } from './normalComputationToggle';
+import { BaseTextShape } from './baseTextShape'
+import { MeshFont } from './meshFont'
+import { NormalComputationToggle } from './normalComputationToggle'
 
-const _tmp = new THREE.Vector2();
+const _tmp = new THREE.Vector2()
 
 /**
  * Represents a text shape for mesh-based fonts (e.g., TTF, OTF, WOFF).
@@ -18,16 +18,16 @@ export class MeshTextShape extends BaseTextShape {
    * Flag to indicate whether the character is found in the font.
    * Used to track if the character exists in the font's glyph set.
    */
-  public isFound = false;
+  public isFound = false
 
-  private readonly font: MeshFont;
-  private readonly fontSize: number;
+  private readonly font: MeshFont
+  private readonly fontSize: number
 
   constructor(char: string, fontSize: number, font: MeshFont) {
-    super(char);
-    this.fontSize = fontSize;
-    this.font = font;
-    this.width = this.getCharWidth(char, fontSize, font);
+    super(char)
+    this.fontSize = fontSize
+    this.font = font
+    this.width = this.getCharWidth(char, fontSize, font)
   }
 
   /**
@@ -36,34 +36,35 @@ export class MeshTextShape extends BaseTextShape {
    * @returns A THREE.js BufferGeometry representing the text shape
    */
   toGeometry(): THREE.BufferGeometry {
-    let geometry = this.font.cache.getGeometry(this.char, this.fontSize);
+    let geometry = this.font.cache.getGeometry(this.char, this.fontSize)
     if (geometry == null) {
       // Use NormalComputationToggle to disable generating 'normal' data in returned geometry
       // to save computation cost because rendering font characters don't need it.
-      geometry = NormalComputationToggle.runWithoutNormals<THREE.BufferGeometry>(() => {
-        const geometry = new TextGeometry(this.char, {
-          font: this.font.font,
-          depth: 0,
-          size: this.fontSize,
-          curveSegments: 3, // change this to increase/decrease display precision
-          bevelSegments: 3,
-          // Pass dummy uv generator to save computation cost because rendering font characters
-          // always use color material and don't need 'uv' data.
-          UVGenerator: {
-            generateTopUV: () => [_tmp, _tmp, _tmp],
-            generateSideWallUV: () => [_tmp, _tmp, _tmp, _tmp],
-          },
-        });
-        if (geometry.hasAttribute('uv')) {
-          geometry.deleteAttribute('uv');
-        }
-        if (geometry.hasAttribute('normal')) {
-          geometry.deleteAttribute('normal');
-        }
-        return mergeVertices(geometry, 1e-6);
-      });
+      geometry =
+        NormalComputationToggle.runWithoutNormals<THREE.BufferGeometry>(() => {
+          const geometry = new TextGeometry(this.char, {
+            font: this.font.font,
+            depth: 0,
+            size: this.fontSize,
+            curveSegments: 3, // change this to increase/decrease display precision
+            bevelSegments: 3,
+            // Pass dummy uv generator to save computation cost because rendering font characters
+            // always use color material and don't need 'uv' data.
+            UVGenerator: {
+              generateTopUV: () => [_tmp, _tmp, _tmp],
+              generateSideWallUV: () => [_tmp, _tmp, _tmp, _tmp]
+            }
+          })
+          if (geometry.hasAttribute('uv')) {
+            geometry.deleteAttribute('uv')
+          }
+          if (geometry.hasAttribute('normal')) {
+            geometry.deleteAttribute('normal')
+          }
+          return mergeVertices(geometry, 1e-6)
+        })
     }
-    return geometry;
+    return geometry
   }
 
   /**
@@ -74,12 +75,12 @@ export class MeshTextShape extends BaseTextShape {
    * @returns The width of the character in pixels
    */
   private getCharWidth(char: string, fontSize: number, font: MeshFont) {
-    const glyph = font.data.glyphs[char];
+    const glyph = font.data.glyphs[char]
     if (!glyph) {
-      this.isFound = false;
-      return 0;
+      this.isFound = false
+      return 0
     }
-    this.isFound = true;
-    return (glyph.ha * fontSize) / font.data.resolution;
+    this.isFound = true
+    return (glyph.ha * fontSize) / font.data.resolution
   }
 }

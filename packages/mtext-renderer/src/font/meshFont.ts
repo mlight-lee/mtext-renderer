@@ -1,8 +1,8 @@
-import { Font, FontData } from 'three/examples/jsm/loaders/FontLoader.js';
+import { Font, FontData } from 'three/examples/jsm/loaders/FontLoader.js'
 
-import { BaseFont } from './baseFont';
-import { parseMeshFont } from './meshFontParser';
-import { MeshTextShape } from './meshTextShape';
+import { BaseFont } from './baseFont'
+import { parseMeshFont } from './meshFontParser'
+import { MeshTextShape } from './meshTextShape'
 
 /**
  * Represents the data structure for mesh-based fonts.
@@ -10,7 +10,7 @@ import { MeshTextShape } from './meshTextShape';
  */
 export interface MeshFontData extends FontData {
   /** Scale factor used to adjust the size of characters when rendering */
-  scaleFactor: number;
+  scaleFactor: number
 }
 
 /**
@@ -20,26 +20,26 @@ export interface MeshFontData extends FontData {
  */
 export class MeshFont extends BaseFont {
   /** Scale factor used to adjust the size of characters */
-  protected scaleFactor?: number;
+  protected scaleFactor?: number
   /** Three.js font instance used for rendering */
-  public readonly font: Font;
+  public readonly font: Font
   /** The type of font (always 'mesh' for this class) */
-  public readonly type = 'mesh';
+  public readonly type = 'mesh'
   /** The parsed font data */
-  public readonly data: MeshFontData;
+  public readonly data: MeshFontData
 
   /**
    * Creates a new instance of MeshFont.
    * @param data - Either a MeshFontData object containing font information or an ArrayBuffer containing raw font data
    */
   constructor(data: MeshFontData | ArrayBuffer) {
-    super();
+    super()
     if (data instanceof ArrayBuffer) {
-      this.data = parseMeshFont(data);
+      this.data = parseMeshFont(data)
     } else {
-      this.data = data;
+      this.data = data
     }
-    this.font = new Font(this.data);
+    this.font = new Font(this.data)
   }
 
   /**
@@ -48,7 +48,7 @@ export class MeshFont extends BaseFont {
    * @returns True if this font contains glyph of the specified character. Otherwise, return false.
    */
   hasChar(char: string): boolean {
-    return this.data.glyphs[char] != null;
+    return this.data.glyphs[char] != null
   }
 
   /**
@@ -58,7 +58,7 @@ export class MeshFont extends BaseFont {
    * @returns Array of shapes representing the text
    */
   generateShapes(text: string, size: number) {
-    return this.font.generateShapes(text, size);
+    return this.font.generateShapes(text, size)
   }
 
   /**
@@ -68,14 +68,14 @@ export class MeshFont extends BaseFont {
    * @returns The shape data for the character, or undefined if not found
    */
   getCharShape(char: string, size: number) {
-    const glyph = this.data.glyphs[char];
+    const glyph = this.data.glyphs[char]
     if (!glyph) {
-      this.addUnsupportedChar(char);
-      return undefined;
+      this.addUnsupportedChar(char)
+      return undefined
     }
 
-    const textShape = new MeshTextShape(char, size, this);
-    return textShape;
+    const textShape = new MeshTextShape(char, size, this)
+    return textShape
   }
 
   /**
@@ -85,10 +85,10 @@ export class MeshFont extends BaseFont {
    */
   getScaleFactor() {
     if (this.scaleFactor == null) {
-      this.scaleFactor = this.data.scaleFactor as number;
-      return this.scaleFactor;
+      this.scaleFactor = this.data.scaleFactor as number
+      return this.scaleFactor
     }
-    return this.scaleFactor;
+    return this.scaleFactor
   }
 
   /**
@@ -98,6 +98,6 @@ export class MeshFont extends BaseFont {
    * @returns The shape data for the not found indicator
    */
   getNotFoundTextShape(size: number) {
-    return new MeshTextShape('?', size, this);
+    return new MeshTextShape('?', size, this)
   }
 }

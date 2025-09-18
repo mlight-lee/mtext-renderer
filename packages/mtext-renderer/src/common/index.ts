@@ -1,2 +1,2 @@
-export * from './eventManager';
-export * from './utils';
+export * from './eventManager'
+export * from './utils'

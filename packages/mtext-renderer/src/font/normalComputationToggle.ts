@@ -1,4 +1,4 @@
-import { BufferGeometry } from 'three';
+import { BufferGeometry } from 'three'
 
 /**
  * Utility class for temporarily disabling `BufferGeometry.computeVertexNormals`.
@@ -23,7 +23,8 @@ export class NormalComputationToggle {
   /**
    * Stores the original `computeVertexNormals` method from BufferGeometry.
    */
-  private static originalComputeVertexNormals = BufferGeometry.prototype.computeVertexNormals;
+  private static originalComputeVertexNormals =
+    BufferGeometry.prototype.computeVertexNormals
 
   /**
    * Dummy replacement for `computeVertexNormals` that does nothing.
@@ -39,14 +40,16 @@ export class NormalComputationToggle {
    * will do nothing until {@link restore} is called.
    */
   static disable(): void {
-    BufferGeometry.prototype.computeVertexNormals = this.dummyComputeVertexNormals;
+    BufferGeometry.prototype.computeVertexNormals =
+      this.dummyComputeVertexNormals
   }
 
   /**
    * Restore the original `computeVertexNormals` implementation.
    */
   static restore(): void {
-    BufferGeometry.prototype.computeVertexNormals = this.originalComputeVertexNormals;
+    BufferGeometry.prototype.computeVertexNormals =
+      this.originalComputeVertexNormals
   }
 
   /**
@@ -66,11 +69,11 @@ export class NormalComputationToggle {
    * @returns The result of the callback, e.g., a geometry.
    */
   static runWithoutNormals<T>(fn: () => T): T {
-    this.disable();
+    this.disable()
     try {
-      return fn();
+      return fn()
     } finally {
-      this.restore();
+      this.restore()
     }
   }
 }

@@ -1,7 +1,12 @@
-import { Point, ShxFont as ShxFontInternal, ShxFontData, ShxFontType } from '@mlightcad/shx-parser';
+import {
+  Point,
+  ShxFont as ShxFontInternal,
+  ShxFontData,
+  ShxFontType
+} from '@mlightcad/shx-parser'
 
-import { BaseFont } from './baseFont';
-import { ShxTextShape } from './shxTextShape';
+import { BaseFont } from './baseFont'
+import { ShxTextShape } from './shxTextShape'
 
 /**
  * ShxFont is a class that extends BaseFont and represents a SHX font.
@@ -9,14 +14,14 @@ import { ShxTextShape } from './shxTextShape';
  */
 export class ShxFont extends BaseFont {
   /** Internal shx font instance */
-  private readonly font: ShxFontInternal;
-  public readonly type = 'shx';
-  public readonly data: ShxFontData;
+  private readonly font: ShxFontInternal
+  public readonly type = 'shx'
+  public readonly data: ShxFontData
 
   constructor(data: ShxFontData | ArrayBuffer) {
-    super();
-    this.font = new ShxFontInternal(data);
-    this.data = this.font.fontData;
+    super()
+    this.font = new ShxFontInternal(data)
+    this.data = this.font.fontData
   }
 
   /**
@@ -25,31 +30,31 @@ export class ShxFont extends BaseFont {
    * @returns True if this font contains glyph of the specified character. Otherwise, return false.
    */
   hasChar(char: string): boolean {
-    const code = char.charCodeAt(0);
-    return this.font.hasChar(code);
+    const code = char.charCodeAt(0)
+    return this.font.hasChar(code)
   }
 
   generateShapes(text: string, size: number) {
-    const shapes: ShxTextShape[] = [];
-    let hOffset = 0.0;
+    const shapes: ShxTextShape[] = []
+    let hOffset = 0.0
     for (let i = 0; i < text.length; i++) {
-      const char = text[i];
+      const char = text[i]
       if (char === ' ') {
-        hOffset += size;
-        continue;
+        hOffset += size
+        continue
       }
-      const shape = this.getCharShape(char, size);
+      const shape = this.getCharShape(char, size)
       if (!shape) {
-        hOffset += size;
-        this.addUnsupportedChar(char);
+        hOffset += size
+        this.addUnsupportedChar(char)
         // const notFund = this.getNotFoundTextShape(size);
         // notFund && shapes.push(notFund);
-        continue;
+        continue
       }
-      shapes.push(shape.offset(new Point(hOffset, 0)));
-      hOffset += shape.width;
+      shapes.push(shape.offset(new Point(hOffset, 0)))
+      hOffset += shape.width
     }
-    return shapes;
+    return shapes
   }
 
   /**
@@ -57,7 +62,7 @@ export class ShxFont extends BaseFont {
    * @returns Always return value 1
    */
   getScaleFactor() {
-    return 1;
+    return 1
   }
 
   /**
@@ -67,25 +72,28 @@ export class ShxFont extends BaseFont {
    * @returns The shape data for the character, or undefined if not found
    */
   public getCharShape(char: string, size: number) {
-    const code = this.getCode(char);
-    const shape = this.font.getCharShape(code, size);
-    return shape ? new ShxTextShape(char, size, shape, this) : undefined;
+    const code = this.getCode(char)
+    const shape = this.font.getCharShape(code, size)
+    return shape ? new ShxTextShape(char, size, shape, this) : undefined
   }
 
   /**
    * For an unsupported char, use "？" as a replacement.
    */
   public getNotFoundTextShape(size: number) {
-    const char = this.font.fontData.header.fontType === ShxFontType.BIGFONT ? '？' : '?';
-    return this.getCharShape(char, size);
+    const char =
+      this.font.fontData.header.fontType === ShxFontType.BIGFONT ? '？' : '?'
+    return this.getCharShape(char, size)
   }
 
   private getCode(char: string) {
-    const fontType = this.font.fontData.header.fontType;
+    const fontType = this.font.fontData.header.fontType
     if (fontType === ShxFontType.BIGFONT) {
       // TODO: Get code from bigfont
-      throw new Error(`Can't get font glyph for '${char}' because big font is not supported yet!`);
+      throw new Error(
+        `Can't get font glyph for '${char}' because big font is not supported yet!`
+      )
     }
-    return char.charCodeAt(0);
+    return char.charCodeAt(0)
   }
 }

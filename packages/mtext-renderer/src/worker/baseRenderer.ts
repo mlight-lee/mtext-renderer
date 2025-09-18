@@ -1,6 +1,6 @@
-import * as THREE from 'three';
+import * as THREE from 'three'
 
-import { ColorSettings,MTextData, TextStyle } from '../renderer/types';
+import { ColorSettings, MTextData, TextStyle } from '../renderer/types'
 
 /**
  * Represents a rendered MText object that extends THREE.Object3D with additional MText-specific properties.
@@ -12,7 +12,7 @@ export interface MTextObject extends THREE.Object3D {
    * This box represents the bounds of the text content without considering transformations.
    * To get the world-space bounding box, apply the object's world matrix to this box.
    */
-  box: THREE.Box3;
+  box: THREE.Box3
 }
 
 /**
@@ -38,7 +38,7 @@ export interface MTextBaseRenderer {
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings?: ColorSettings
-  ): Promise<MTextObject>;
+  ): Promise<MTextObject>
 
   /**
    * Ensure the specified fonts are available to the renderer.
@@ -48,7 +48,7 @@ export interface MTextBaseRenderer {
    * @param fonts Font names to load (without extension for built-ins).
    * @returns A Promise with the list of fonts that were processed.
    */
-  loadFonts(fonts: string[]): Promise<{ loaded: string[] }>;
+  loadFonts(fonts: string[]): Promise<{ loaded: string[] }>
 
   /**
    * Retrieve the list of fonts that can be used by the renderer.
@@ -57,12 +57,12 @@ export interface MTextBaseRenderer {
    *
    * @returns A Promise with available font metadata.
    */
-  getAvailableFonts(): Promise<{ fonts: Array<{ name: string[] }> }>;
+  getAvailableFonts(): Promise<{ fonts: Array<{ name: string[] }> }>
 
   /**
    * Release any resources owned by the renderer (e.g., terminate Web Workers).
    *
    * Safe to call multiple times.
    */
-  destroy(): void;
+  destroy(): void
 }

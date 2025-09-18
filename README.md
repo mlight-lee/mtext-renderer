@@ -26,7 +26,8 @@ will be stored in local IndexedDB to improve performance. Default value is true.
   - `fontLoaded`: Triggered when a font is successfully loaded
 
 **Public Methods:**
-- `loadFonts(urls)`: Loads fonts from URLs
+- `getAvaiableFonts()`: Retrieve metadata of available fonts from the configured loader
+- `loadFontsByNames(names)`: Loads fonts by logical names (e.g., 'simsun', 'arial')
 - `getCharShape(char, fontName, size)`: Gets text shape for a character
 - `getFontScaleFactor(fontName)`: Gets scale factor for a font
 - `getNotFoundTextShape(size)`: Gets shape for not found indicator
@@ -35,7 +36,9 @@ will be stored in local IndexedDB to improve performance. Default value is true.
 
 ### FontLoader & DefaultFontLoader
 
-Interface for font loading operations. The default implementation [DefaultFontLoader](./src/font/defaultFontLoader.ts) uses a [CDN-based font repository](https://cdn.jsdelivr.net/gh/mlight-lee/cad-data/fonts/). It loads font metadata from a JSON file and provides access to available fonts. You can implement one font loader by your own if you want to use fonts hosted in your own server.
+Interface for font loading operations. The default implementation [DefaultFontLoader](./src/font/defaultFontLoader.ts) uses a [CDN-based font repository](https://cdn.jsdelivr.net/gh/mlight-lee/cad-data/fonts/). It loads font metadata from a JSON file and provides access to available fonts.
+
+You do NOT need to create `DefaultFontLoader` yourself anymore. `FontManager` manages a loader instance internally. If you want to customize font loading, implement `FontLoader` and set it via `FontManager.instance.setFontLoader(customLoader)`.
 
 **Public Methods:**
 - `load(fontNames)`: Loads specified fonts into the system
@@ -95,8 +98,6 @@ Defines the common rendering contract for producing Three.js objects from MText 
 
 **Public Methods:**
 - `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText content into a Three.js object hierarchy
-- `loadFonts(fonts)`: Ensure specified fonts are available to the renderer
-- `getAvailableFonts()`: Retrieve list of fonts that can be used by the renderer
 - `destroy()`: Release any resources owned by the renderer
 
 ### MTextObject Interface
@@ -112,8 +113,6 @@ Renders MText content directly in the main thread. This is the simplest renderer
 
 **Public Methods:**
 - `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText directly in the main thread
-- `loadFonts(fonts)`: Load fonts in the main thread
-- `getAvailableFonts()`: Get available fonts from the main thread
 - `destroy()`: Cleanup resources
 
 ### WebWorkerRenderer (MTextWorkerManager)
@@ -125,8 +124,6 @@ Manages communication with MText Web Workers for parallel text rendering. This r
 
 **Public Methods:**
 - `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText using worker pool
-- `loadFonts(fonts)`: Load fonts in all workers
-- `getAvailableFonts()`: Get available fonts from workers
 - `terminate()`: Terminate all workers
 - `destroy()`: Cleanup all resources
 
@@ -148,8 +145,6 @@ A flexible renderer that can switch between main thread and Web Worker rendering
 - `switchMode(mode)`: Switch between main thread and worker rendering modes
 - `getMode()`: Get current rendering mode
 - `renderMText(mtextContent, textStyle, colorSettings?)`: Render using current mode
-- `loadFonts(fonts)`: Load fonts using current mode
-- `getAvailableFonts()`: Get available fonts using current mode
 - `destroy()`: Clean up all resources
 
 ### MTextWorker
@@ -158,6 +153,7 @@ The actual Web Worker implementation that handles MText rendering tasks. This wo
 
 **Features:**
 - Independent font and style management
+- Can preload fonts on demand via a `loadFonts` message to avoid redundant concurrent loads
 - Efficient object serialization for transfer to main thread
 - Support for transferable objects to minimize memory copying
 - Error handling and response management
@@ -166,16 +162,8 @@ The actual Web Worker implementation that handles MText rendering tasks. This wo
 Main class for rendering AutoCAD MText content. Extends THREE.Object3D to integrate with Three.js scene graph.
 
 **Public Properties:**
-- `content`: MText content configuration including text, height, width, and position
-- `style`: Text style configuration including font, color, and text generation flags
 - `fontManager`: Reference to FontManager instance for font operations
 - `styleManager`: Reference to StyleManager instance for style operations
-
-**Public Methods:**
-- `update()`: Updates the text rendering based on current content and style
-- `setContent(content)`: Updates the text content
-- `setStyle(style)`: Updates the text style
-- `dispose()`: Cleans up resources when the MText instance is no longer needed
 
 ## Class Diagram
 
@@ -334,41 +322,40 @@ classDiagram
 
 ```typescript
 import * as THREE from 'three';
-import { DefaultFontLoader, FontManager, MText, StyleManager } from '@mlightcad/mtext-renderer';
+import { FontManager, MText, StyleManager } from '@mlightcad/mtext-renderer';
 
 // Initialize core components
 const fontManager = FontManager.instance;
 const styleManager = new StyleManager();
-const fontLoader = new DefaultFontLoader();
 
-// Load fonts needed
-await fontLoader.load(['simsun']);
+// Preload a font
+await fontManager.loadFontsByNames(['simsun']);
 
 // Create MText content
 const mtextContent = {
-    text: '{\\fArial|b0|i0|c0|p34;Hello World}',
-    height: 0.1,
-    width: 0,
-    position: new THREE.Vector3(0, 0, 0)
+  text: '{\\fArial|b0|i0|c0|p34;Hello World}',
+  height: 0.1,
+  width: 0,
+  position: new THREE.Vector3(0, 0, 0),
 };
 
 // Create MText instance with style
 const mtext = new MText(
-    mtextContent,
-    {
-        name: 'Standard',
-        standardFlag: 0,
-        fixedTextHeight: 0.1,
-        widthFactor: 1,
-        obliqueAngle: 0,
-        textGenerationFlag: 0,
-        lastHeight: 0.1,
-        font: 'Standard',
-        bigFont: '',
-        color: 0xffffff
-    },
-    styleManager,
-    fontManager
+  mtextContent,
+  {
+    name: 'Standard',
+    standardFlag: 0,
+    fixedTextHeight: 0.1,
+    widthFactor: 1,
+    obliqueAngle: 0,
+    textGenerationFlag: 0,
+    lastHeight: 0.1,
+    font: 'Standard',
+    bigFont: '',
+    color: 0xffffff,
+  },
+  styleManager,
+  fontManager
 );
 
 // Add to Three.js scene
@@ -385,10 +372,7 @@ import { MainThreadRenderer } from '@mlightcad/mtext-renderer';
 // Create main thread renderer
 const renderer = new MainThreadRenderer();
 
-// Load required fonts
-await renderer.loadFonts(['simsun', 'arial']);
-
-// Render MText content
+// Render MText content (fonts are loaded on demand during rendering)
 const mtextObject = await renderer.renderMText(
   mtextContent,
   textStyle,
@@ -407,10 +391,10 @@ import { WebWorkerRenderer } from '@mlightcad/mtext-renderer';
 // Create worker renderer with custom pool size
 const workerRenderer = new WebWorkerRenderer({ poolSize: 4 }); // 4 workers
 
-// Load fonts in all workers
-await workerRenderer.loadFonts(['simsun', 'arial']);
+// Optionally preload fonts once via a coordinator to avoid duplicate concurrent loads
+// await workerRenderer.loadFonts(['simsun', 'arial']);
 
-// Render MText content using workers
+// Render MText content using workers (fonts will be loaded on demand if not preloaded)
 const mtextObject = await workerRenderer.renderMText(
   mtextContent,
   textStyle,
@@ -432,10 +416,7 @@ import { UnifiedRenderer } from '@mlightcad/mtext-renderer';
 // Create unified renderer starting in main thread mode
 const unifiedRenderer = new UnifiedRenderer('main');
 
-// Load fonts
-await unifiedRenderer.loadFonts(['simsun', 'arial']);
-
-// Render using main thread
+// Render using main thread (fonts loaded on demand)
 let mtextObject = await unifiedRenderer.renderMText(
   mtextContent,
   textStyle,
@@ -447,8 +428,8 @@ scene.add(mtextObject);
 // Switch to worker mode for heavy rendering tasks
 unifiedRenderer.switchMode('worker');
 
-// Re-load fonts in workers
-await unifiedRenderer.loadFonts(['simsun', 'arial']);
+// Optionally preload fonts in workers to avoid duplicates
+// await unifiedRenderer.loadFonts(['simsun', 'arial']);
 
 // Render using workers
 mtextObject = await unifiedRenderer.renderMText(

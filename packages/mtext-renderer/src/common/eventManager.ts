@@ -2,14 +2,14 @@
  * The class representing one event manager
  */
 export class EventManager<T = unknown> {
-  private listeners: ((payload: T) => void)[] = [];
+  private listeners: ((payload: T) => void)[] = []
 
   /**
    * Add the event listener
    * @param listener Input listener to be added
    */
   public addEventListener(listener: (payload: T) => void) {
-    this.listeners.push(listener);
+    this.listeners.push(listener)
   }
 
   /**
@@ -17,7 +17,7 @@ export class EventManager<T = unknown> {
    * @param listener Input listener to be removed
    */
   public removeEventListener(listener: (payload: T) => void) {
-    this.listeners = this.listeners.filter((s) => s !== listener);
+    this.listeners = this.listeners.filter(s => s !== listener)
   }
 
   /**
@@ -25,8 +25,8 @@ export class EventManager<T = unknown> {
    * @param listener Input listener to be added
    */
   public replaceEventListener(listener: (payload: T) => void) {
-    this.removeEventListener(listener);
-    this.addEventListener(listener);
+    this.removeEventListener(listener)
+    this.addEventListener(listener)
   }
 
   /**
@@ -35,8 +35,8 @@ export class EventManager<T = unknown> {
    */
   public dispatch(payload?: T, ...args: unknown[]) {
     for (const item of this.listeners) {
-      const listener = item as (...args: unknown[]) => void;
-      listener.call(null, payload, ...args);
+      const listener = item as (...args: unknown[]) => void
+      listener.call(null, payload, ...args)
     }
   }
 }

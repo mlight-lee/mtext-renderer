@@ -1,22 +1,22 @@
-import type { DBSchema } from 'idb';
+import type { DBSchema } from 'idb'
 
-import { FontData } from '../font/font';
+import { FontData } from '../font/font'
 
 /**
  * Store name constant
  */
 export const DB_STORES = {
-  fonts: 'fonts',
-} as const;
+  fonts: 'fonts'
+} as const
 
 /**
  * Database schema interface for the font cache
  */
 export interface DbFontCacheSchema extends DBSchema {
   [DB_STORES.fonts]: {
-    key: string;
-    value: FontData;
-  };
+    key: string
+    value: FontData
+  }
 }
 
 /**
@@ -28,8 +28,8 @@ export const dbSchema = [
     stores: [
       {
         name: DB_STORES.fonts,
-        keyPath: 'name',
-      },
-    ],
-  },
-];
+        keyPath: 'name'
+      }
+    ]
+  }
+]

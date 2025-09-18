@@ -1,26 +1,23 @@
-import { FontManager } from '../font';
-import { DefaultFontLoader } from '../font/defaultFontLoader';
-import { MText } from '../renderer/mtext';
-import { StyleManager } from '../renderer/styleManager';
-import { ColorSettings,MTextData, TextStyle } from '../renderer/types';
-import { MTextBaseRenderer, MTextObject } from './baseRenderer';
+import { FontManager } from '../font'
+import { MText } from '../renderer/mtext'
+import { StyleManager } from '../renderer/styleManager'
+import { ColorSettings, MTextData, TextStyle } from '../renderer/types'
+import { MTextBaseRenderer, MTextObject } from './baseRenderer'
 
 /**
  * Main thread renderer for MText objects
  * This provides the same interface as the worker but runs in the main thread
  */
 export class MainThreadRenderer implements MTextBaseRenderer {
-  private fontManager: FontManager;
-  private styleManager: StyleManager;
-  private fontLoader: DefaultFontLoader;
+  private fontManager: FontManager
+  private styleManager: StyleManager
 
   constructor() {
-    this.fontManager = FontManager.instance;
-    this.styleManager = new StyleManager();
-    this.fontLoader = new DefaultFontLoader();
+    this.fontManager = FontManager.instance
+    this.styleManager = new StyleManager()
 
     // Set default font
-    this.fontManager.defaultFont = 'simkai';
+    this.fontManager.defaultFont = 'simkai'
   }
 
   /**
@@ -29,37 +26,36 @@ export class MainThreadRenderer implements MTextBaseRenderer {
   async renderMText(
     mtextContent: MTextData,
     textStyle: TextStyle,
-    colorSettings: ColorSettings = { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
+    colorSettings: ColorSettings = {
+      byLayerColor: 0xffffff,
+      byBlockColor: 0xffffff
+    }
   ): Promise<MTextObject> {
-    // Create MText instance
     const mtext = new MText(
       mtextContent,
       textStyle,
       this.styleManager,
       this.fontManager,
       colorSettings
-    );
-
-    // Update the world matrix to ensure all transformations are applied
-    mtext.updateMatrixWorld(true);
-
-    return mtext as MTextObject;
+    )
+    mtext.updateMatrixWorld(true)
+    return mtext as MTextObject
   }
 
   /**
    * Load fonts in the main thread
    */
   async loadFonts(fonts: string[]): Promise<{ loaded: string[] }> {
-    await this.fontLoader.load(fonts);
-    return { loaded: fonts };
+    await this.fontManager.loadFontsByNames(fonts)
+    return { loaded: fonts }
   }
 
   /**
    * Get available fonts from the main thread
    */
   async getAvailableFonts(): Promise<{ fonts: Array<{ name: string[] }> }> {
-    const fonts = await this.fontLoader.getAvaiableFonts();
-    return { fonts };
+    const fonts = await this.fontManager.getAvaiableFonts()
+    return { fonts }
   }
 
   destroy(): void {

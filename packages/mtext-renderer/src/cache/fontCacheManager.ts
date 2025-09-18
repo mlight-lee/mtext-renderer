@@ -1,24 +1,25 @@
-import { type IDBPDatabase,openDB } from 'idb';
+import { type IDBPDatabase, openDB } from 'idb'
 
-import { FontData } from '../font';
-import { DB_STORES, DbFontCacheSchema, dbSchema } from './schema';
+import { FontData } from '../font'
+import { DB_STORES, DbFontCacheSchema, dbSchema } from './schema'
 
 /**
  * A simple font cache interface that provides map-like operations for font data
  */
 export class FontCacheManager {
-  private static readonly DATABASE_NAME = 'mlightcad';
-  private static readonly DATABASE_VERSION = dbSchema[dbSchema.length - 1].version;
-  private static _instance: FontCacheManager | undefined;
-  private db: IDBPDatabase<DbFontCacheSchema> | undefined;
-  private isClosing: boolean = false;
+  private static readonly DATABASE_NAME = 'mlightcad'
+  private static readonly DATABASE_VERSION =
+    dbSchema[dbSchema.length - 1].version
+  private static _instance: FontCacheManager | undefined
+  private db: IDBPDatabase<DbFontCacheSchema> | undefined
+  private isClosing: boolean = false
 
   private constructor() {
     // Add window unload handler to close database
     if (typeof window !== 'undefined') {
       window.addEventListener('unload', () => {
-        this.close();
-      });
+        this.close()
+      })
     }
   }
 
@@ -27,9 +28,9 @@ export class FontCacheManager {
    */
   public static get instance(): FontCacheManager {
     if (!FontCacheManager._instance) {
-      FontCacheManager._instance = new FontCacheManager();
+      FontCacheManager._instance = new FontCacheManager()
     }
-    return FontCacheManager._instance;
+    return FontCacheManager._instance
   }
 
   /**
@@ -38,8 +39,8 @@ export class FontCacheManager {
    * @param fontData The font data to store
    */
   public async set(fileName: string, fontData: FontData): Promise<void> {
-    const db = await this.getDatabase();
-    await db.put(DB_STORES.fonts, { ...fontData, name: fileName });
+    const db = await this.getDatabase()
+    await db.put(DB_STORES.fonts, { ...fontData, name: fileName })
   }
 
   /**
@@ -48,8 +49,8 @@ export class FontCacheManager {
    * @returns The font data if found, undefined otherwise
    */
   public async get(fileName: string): Promise<FontData | undefined> {
-    const db = await this.getDatabase();
-    return await db.get(DB_STORES.fonts, fileName);
+    const db = await this.getDatabase()
+    return await db.get(DB_STORES.fonts, fileName)
   }
 
   /**
@@ -57,8 +58,8 @@ export class FontCacheManager {
    * @param fileName The font file name (key)
    */
   public async delete(fileName: string): Promise<void> {
-    const db = await this.getDatabase();
-    await db.delete(DB_STORES.fonts, fileName);
+    const db = await this.getDatabase()
+    await db.delete(DB_STORES.fonts, fileName)
   }
 
   /**
@@ -66,16 +67,16 @@ export class FontCacheManager {
    * @returns An array of all font data in the cache
    */
   public async getAll(): Promise<FontData[]> {
-    const db = await this.getDatabase();
-    return await db.getAll(DB_STORES.fonts);
+    const db = await this.getDatabase()
+    return await db.getAll(DB_STORES.fonts)
   }
 
   /**
    * Clears all fonts from the cache
    */
   public async clear(): Promise<void> {
-    const db = await this.getDatabase();
-    await db.clear(DB_STORES.fonts);
+    const db = await this.getDatabase()
+    await db.clear(DB_STORES.fonts)
   }
 
   /**
@@ -83,8 +84,8 @@ export class FontCacheManager {
    * @param fileName The font file name (key)
    */
   public async has(fileName: string): Promise<boolean> {
-    const font = await this.get(fileName);
-    return font !== undefined;
+    const font = await this.get(fileName)
+    return font !== undefined
   }
 
   /**
@@ -92,16 +93,16 @@ export class FontCacheManager {
    * After calling this, any further operations will require reopening the database.
    */
   public close(): void {
-    if (this.isClosing) return;
-    this.isClosing = true;
+    if (this.isClosing) return
+    this.isClosing = true
 
     try {
       if (this.db) {
-        this.db.close();
-        this.db = undefined;
+        this.db.close()
+        this.db = undefined
       }
     } finally {
-      this.isClosing = false;
+      this.isClosing = false
     }
   }
 
@@ -110,37 +111,40 @@ export class FontCacheManager {
    * Use with caution as this operation cannot be undone.
    */
   public async destroy(): Promise<void> {
-    this.close();
-    await indexedDB.deleteDatabase(FontCacheManager.DATABASE_NAME);
-    FontCacheManager._instance = undefined;
+    this.close()
+    await indexedDB.deleteDatabase(FontCacheManager.DATABASE_NAME)
+    FontCacheManager._instance = undefined
   }
 
   // Private methods for database management
   private async getDatabase(): Promise<IDBPDatabase<DbFontCacheSchema>> {
     if (this.isClosing) {
-      throw new Error('Cannot perform operation while database is closing');
+      throw new Error('Cannot perform operation while database is closing')
     }
 
     if (this.db) {
-      return this.db;
+      return this.db
     }
 
     this.db = await openDB<DbFontCacheSchema>(
       FontCacheManager.DATABASE_NAME,
       FontCacheManager.DATABASE_VERSION,
       {
-        upgrade: (db, oldVersion, newVersion) => this.handleUpgrade(db, oldVersion, newVersion),
+        upgrade: (db, oldVersion, newVersion) =>
+          this.handleUpgrade(db, oldVersion, newVersion),
         blocked() {
-          console.warn('Database upgrade blocked - please close other tabs using the application');
+          console.warn(
+            'Database upgrade blocked - please close other tabs using the application'
+          )
         },
         blocking() {
-          console.warn('Database blocking newer version - closing connection');
-          FontCacheManager.instance.close();
-        },
+          console.warn('Database blocking newer version - closing connection')
+          FontCacheManager.instance.close()
+        }
       }
-    );
+    )
 
-    return this.db;
+    return this.db
   }
 
   /**
@@ -155,11 +159,13 @@ export class FontCacheManager {
     newVersion: number | null
   ): void {
     const upgrades = dbSchema.filter(
-      (schema) => schema.version > oldVersion && (!newVersion || schema.version <= newVersion)
-    );
+      schema =>
+        schema.version > oldVersion &&
+        (!newVersion || schema.version <= newVersion)
+    )
 
     for (const upgrade of upgrades) {
-      this.applySchemaVersion(db, upgrade);
+      this.applySchemaVersion(db, upgrade)
     }
   }
 
@@ -174,7 +180,7 @@ export class FontCacheManager {
   ): void {
     for (const store of schema.stores) {
       if (!db.objectStoreNames.contains(store.name)) {
-        db.createObjectStore(store.name, { keyPath: store.keyPath });
+        db.createObjectStore(store.name, { keyPath: store.keyPath })
       }
     }
   }

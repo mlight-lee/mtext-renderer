@@ -1,26 +1,26 @@
-import { ColorSettings,MTextData, TextStyle } from '../renderer/types';
-import { MTextBaseRenderer, MTextObject } from './baseRenderer';
-import { MainThreadRenderer } from './mainThreadRenderer';
-import { WebWorkerRenderer, WebWorkerRendererConfig } from './webWorkerRenderer';
+import { ColorSettings, MTextData, TextStyle } from '../renderer/types'
+import { MTextBaseRenderer, MTextObject } from './baseRenderer'
+import { MainThreadRenderer } from './mainThreadRenderer'
+import { WebWorkerRenderer, WebWorkerRendererConfig } from './webWorkerRenderer'
 
-export type RenderMode = 'main' | 'worker';
+export type RenderMode = 'main' | 'worker'
 
 /**
  * Unified renderer that can work in both main thread and web worker modes
  */
 export class UnifiedRenderer {
-  private workerManager: WebWorkerRenderer | null = null;
-  private mainThreadRenderer: MainThreadRenderer;
-  private adapter: MTextBaseRenderer;
-  private currentMode: RenderMode;
+  private workerManager: WebWorkerRenderer | null = null
+  private mainThreadRenderer: MainThreadRenderer
+  private adapter: MTextBaseRenderer
+  private currentMode: RenderMode
 
   constructor(mode: RenderMode = 'main') {
-    this.currentMode = mode;
-    this.mainThreadRenderer = new MainThreadRenderer();
-    this.adapter = this.mainThreadRenderer;
+    this.currentMode = mode
+    this.mainThreadRenderer = new MainThreadRenderer()
+    this.adapter = this.mainThreadRenderer
     if (mode === 'worker') {
-      this.workerManager = new WebWorkerRenderer({});
-      this.adapter = this.workerManager;
+      this.workerManager = new WebWorkerRenderer({})
+      this.adapter = this.workerManager
     }
   }
 
@@ -31,23 +31,23 @@ export class UnifiedRenderer {
    */
   switchMode(mode: RenderMode, workerConfig?: WebWorkerRendererConfig): void {
     if (this.currentMode === mode) {
-      return; // Already in the requested mode
+      return // Already in the requested mode
     }
 
     // Clean up current mode
     if (this.currentMode === 'worker' && this.workerManager) {
-      this.workerManager.terminate();
-      this.workerManager = null;
+      this.workerManager.terminate()
+      this.workerManager = null
     }
 
-    this.currentMode = mode;
+    this.currentMode = mode
 
     // Initialize new mode
     if (mode === 'worker') {
-      this.workerManager = new WebWorkerRenderer(workerConfig || {});
-      this.adapter = this.workerManager;
+      this.workerManager = new WebWorkerRenderer(workerConfig || {})
+      this.adapter = this.workerManager
     } else {
-      this.adapter = this.mainThreadRenderer;
+      this.adapter = this.mainThreadRenderer
     }
   }
 
@@ -55,7 +55,7 @@ export class UnifiedRenderer {
    * Get current rendering mode
    */
   getMode(): RenderMode {
-    return this.currentMode;
+    return this.currentMode
   }
 
   /**
@@ -64,23 +64,26 @@ export class UnifiedRenderer {
   async renderMText(
     mtextContent: MTextData,
     textStyle: TextStyle,
-    colorSettings: ColorSettings = { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
+    colorSettings: ColorSettings = {
+      byLayerColor: 0xffffff,
+      byBlockColor: 0xffffff
+    }
   ): Promise<MTextObject> {
-    return this.adapter.renderMText(mtextContent, textStyle, colorSettings);
+    return this.adapter.renderMText(mtextContent, textStyle, colorSettings)
   }
 
   /**
    * Load fonts using the current mode
    */
   async loadFonts(fonts: string[]): Promise<{ loaded: string[] }> {
-    return this.adapter.loadFonts(fonts);
+    return this.adapter.loadFonts(fonts)
   }
 
   /**
    * Get available fonts using the current mode
    */
   async getAvailableFonts(): Promise<{ fonts: Array<{ name: string[] }> }> {
-    return this.adapter.getAvailableFonts();
+    return this.adapter.getAvailableFonts()
   }
 
   /**
@@ -88,9 +91,9 @@ export class UnifiedRenderer {
    */
   destroy(): void {
     if (this.workerManager) {
-      this.workerManager.terminate();
-      this.workerManager = null;
+      this.workerManager.terminate()
+      this.workerManager = null
     }
-    this.mainThreadRenderer.destroy();
+    this.mainThreadRenderer.destroy()
   }
 }

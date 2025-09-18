@@ -1,1 +1,1 @@
-export * from './fontCacheManager';
+export * from './fontCacheManager'

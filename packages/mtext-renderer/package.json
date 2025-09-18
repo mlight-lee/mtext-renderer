@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/mtext-renderer",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "AutoCAD MText renderer based on Three.js",
   "license": "MIT",
   "author": "MLight Lee <mlight.lee@outlook.com>",
@@ -20,7 +20,7 @@
     "package.json"
   ],
   "scripts": {
-    "build": "vite build -c vite.config.main.ts && vite build -c vite.config.worker.ts",
+    "build": "tsc && vite build -c vite.config.main.ts && vite build -c vite.config.worker.ts",
     "build:main": "vite build -c vite.config.main.ts",
     "build:worker": "vite build -c vite.config.worker.ts",
     "clean": "rimraf dist lib tsconfig.tsbuildinfo",

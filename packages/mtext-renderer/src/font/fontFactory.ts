@@ -1,10 +1,10 @@
-import { ShxFontData } from '@mlightcad/shx-parser';
+import { ShxFontData } from '@mlightcad/shx-parser'
 
-import { getExtension } from '../common';
-import { BaseFont } from './baseFont';
-import { FontData } from './font';
-import { MeshFont, MeshFontData } from './meshFont';
-import { ShxFont } from './shxFont';
+import { getExtension } from '../common'
+import { BaseFont } from './baseFont'
+import { FontData } from './font'
+import { MeshFont, MeshFontData } from './meshFont'
+import { ShxFont } from './shxFont'
 
 /**
  * A singleton factory class for creating font instances.
@@ -18,7 +18,7 @@ import { ShxFont } from './shxFont';
  * ```
  */
 export class FontFactory {
-  private static _instance: FontFactory;
+  private static _instance: FontFactory
 
   private constructor() {}
 
@@ -28,9 +28,9 @@ export class FontFactory {
    */
   public static get instance(): FontFactory {
     if (!FontFactory._instance) {
-      FontFactory._instance = new FontFactory();
+      FontFactory._instance = new FontFactory()
     }
-    return FontFactory._instance;
+    return FontFactory._instance
   }
 
   /**
@@ -43,11 +43,11 @@ export class FontFactory {
    */
   public createFont(data: FontData): BaseFont {
     if (data.type === 'shx') {
-      return new ShxFont(data.data as ShxFontData);
+      return new ShxFont(data.data as ShxFontData)
     } else if (data.type === 'mesh') {
-      return new MeshFont(data.data as MeshFontData);
+      return new MeshFont(data.data as MeshFontData)
     }
-    throw new Error('Unsupported font data type');
+    throw new Error('Unsupported font data type')
   }
 
   /**
@@ -60,14 +60,14 @@ export class FontFactory {
    * @throws {Error} If the file type is not supported
    */
   public createFontFromBuffer(fileName: string, buffer: ArrayBuffer): BaseFont {
-    const extension = getExtension(fileName).toLowerCase();
+    const extension = getExtension(fileName).toLowerCase()
 
     if (extension === 'shx') {
-      return new ShxFont(buffer);
+      return new ShxFont(buffer)
     } else if (['ttf', 'otf', 'woff'].includes(extension)) {
-      return new MeshFont(buffer);
+      return new MeshFont(buffer)
     }
 
-    throw new Error(`Unsupported font file type: ${extension}`);
+    throw new Error(`Unsupported font file type: ${extension}`)
   }
 }

@@ -114,13 +114,22 @@ export class FontManager {
   }
 
   /**
+   * Loads the default font
+   * @returns Promise that resolves to the font load statuses
+   */
+  async loadDefaultFont() {
+    return await this.loadFontsByNames(this.defaultFont)
+  }
+
+  /**
    * Loads the specified fonts from font names
    * @param names - Font names to load.
    * @returns Promise that resolves to an array of font load statuses
    */
-  async loadFontsByNames(names: string | string[]) {
+  async loadFontsByNames(names: string | string[]): Promise<FontLoadStatus> {
     names = Array.isArray(names) ? names : [names]
-    return await this.fontLoader.load(names)
+    const status = await this.fontLoader.load(names)
+    return status[0]
   }
 
   /**

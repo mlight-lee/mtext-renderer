@@ -202,7 +202,7 @@ class MTextRendererExample {
       this.statusDiv.textContent = `Switched to ${mode} thread rendering`
       this.statusDiv.style.color = '#0f0'
 
-      // Call this function to guarantee default font is loaded 
+      // Call this function to guarantee default font is loaded
       await this.initializeFonts(false)
 
       // Re-render with current content to reflect the new mode

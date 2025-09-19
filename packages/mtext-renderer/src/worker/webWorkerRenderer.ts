@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 
+import { FontManager } from '../font'
 import { ColorSettings, MTextData, TextStyle } from '../renderer/types'
 import { MTextBaseRenderer, MTextObject } from './baseRenderer'
 
@@ -108,6 +109,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   private poolSize: number
   private isLoadFontsOnDemand: boolean
   private readyPromise: Promise<void> | null = null
+  private isInitialized: boolean
 
   constructor(config: WebWorkerRendererConfig = { isLoadFontsOnDemand: true }) {
     // Apply default values
@@ -131,8 +133,16 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
       this.inFlightPerWorker.push(0)
     }
 
-    // Workers are ready immediately after creation
-    void this.ensureInitialized()
+    this.isInitialized = false
+  }
+
+  private async ensureInitialized() {
+    if (!this.isInitialized) {
+      // Guarantee the default font is loaded
+      await this.loadFonts([FontManager.instance.defaultFont])
+      this.isInitialized = true
+    }
+    await this.ensureTasksFinished()
   }
 
   private handleWorkerMessage(response: WorkerResponse) {
@@ -218,7 +228,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     })
   }
 
-  private ensureInitialized(): Promise<void> {
+  private ensureTasksFinished(): Promise<void> {
     if (this.readyPromise) return this.readyPromise
     if (this.workers.length === 0) return Promise.resolve()
 
@@ -278,7 +288,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
    * Load fonts in the worker
    */
   async loadFonts(fonts: string[]): Promise<{ loaded: string[] }> {
-    await this.ensureInitialized()
+    await this.ensureTasksFinished()
     const results = await Promise.all(
       this.workers.map(
         (worker, index) =>
@@ -317,7 +327,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   async getAvailableFonts(): Promise<{ fonts: Array<{ name: string[] }> }> {
     // Query a single worker (all should be in sync after loadFonts broadcasts)
     if (this.workers.length === 0) return { fonts: [] }
-    await this.ensureInitialized()
+    await this.ensureTasksFinished()
     const workerIndex = 0
     const worker = this.workers[workerIndex]
     return new Promise<{ fonts: Array<{ name: string[] }> }>(

@@ -30,9 +30,6 @@ interface WorkerResponse {
 const fontManager = FontManager.instance
 const styleManager = new StyleManager()
 
-// Set default font
-fontManager.defaultFont = 'simkai'
-
 // Handle messages from main thread
 self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
   const { type, id, data } = event.data

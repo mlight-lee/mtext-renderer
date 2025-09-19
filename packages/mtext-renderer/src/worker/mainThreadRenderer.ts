@@ -11,13 +11,12 @@ import { MTextBaseRenderer, MTextObject } from './baseRenderer'
 export class MainThreadRenderer implements MTextBaseRenderer {
   private fontManager: FontManager
   private styleManager: StyleManager
+  private isInitialized: boolean
 
   constructor() {
     this.fontManager = FontManager.instance
     this.styleManager = new StyleManager()
-
-    // Set default font
-    this.fontManager.defaultFont = 'simkai'
+    this.isInitialized = false
   }
 
   /**
@@ -31,6 +30,7 @@ export class MainThreadRenderer implements MTextBaseRenderer {
       byBlockColor: 0xffffff
     }
   ): Promise<MTextObject> {
+    await this.ensureInitialized()
     const mtext = new MText(
       mtextContent,
       textStyle,
@@ -61,5 +61,13 @@ export class MainThreadRenderer implements MTextBaseRenderer {
 
   destroy(): void {
     // nothing to cleanup for main thread renderer currently
+  }
+
+  private async ensureInitialized() {
+    if (!this.isInitialized) {
+      // Guarantee the default font is loaded
+      await this.loadFonts([FontManager.instance.defaultFont])
+      this.isInitialized = true
+    }
   }
 }

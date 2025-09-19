@@ -58,7 +58,7 @@ export class FontManager {
   /** Flag to enable/disable font caching */
   public enableFontCache = true
   /** Default font to use when a requested font is not found */
-  public defaultFont = 'simsun'
+  public defaultFont = 'simkai'
 
   /** Event managers for font-related events */
   public readonly events = {
@@ -111,6 +111,14 @@ export class FontManager {
    */
   async getAvaiableFonts() {
     return await this.fontLoader.getAvaiableFonts()
+  }
+
+  /**
+   * Return true if the default font was loaded.
+   * @returns True if the default font was loaded. False otherwise.
+   */
+  isDefaultFontLoaded() {
+    return this.fontMap.get(this.defaultFont.toLowerCase()) != null
   }
 
   /**

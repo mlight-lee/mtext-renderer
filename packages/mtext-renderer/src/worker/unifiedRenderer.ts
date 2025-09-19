@@ -17,12 +17,15 @@ export class UnifiedRenderer {
 
   /**
    * Constructor
-   * 
+   *
    * @param mode - Rendering mode. Default is 'main' which means rendering in main thread.
    * @param workerConfig - Configuration options for WebWorkerRenderer which is used
    *                     when render mode is 'worker'.
    */
-  constructor(mode: RenderMode = 'main', workerConfig: WebWorkerRendererConfig = {}) {
+  constructor(
+    mode: RenderMode = 'main',
+    workerConfig: WebWorkerRendererConfig = {}
+  ) {
     this.currentMode = mode
     this.mainThreadRenderer = new MainThreadRenderer()
     this.adapter = this.mainThreadRenderer

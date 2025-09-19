@@ -418,7 +418,9 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
       // Create material using StyleManager for proper material reuse
       let material: THREE.Material
       if (childData.type === 'mesh') {
-        material = this.styleManager.getMeshBasicMaterial(childData.material.color)
+        material = this.styleManager.getMeshBasicMaterial(
+          childData.material.color
+        )
         // Apply additional properties if they differ from defaults
         if (childData.material.transparent !== undefined) {
           material.transparent = childData.material.transparent
@@ -430,7 +432,9 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
           material.side = childData.material.side as THREE.Side
         }
       } else {
-        material = this.styleManager.getLineBasicMaterial(childData.material.color)
+        material = this.styleManager.getLineBasicMaterial(
+          childData.material.color
+        )
         // Apply additional properties if they differ from defaults
         if (childData.material.transparent !== undefined) {
           material.transparent = childData.material.transparent
@@ -439,7 +443,8 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
           material.opacity = childData.material.opacity
         }
         if (childData.material.linewidth !== undefined) {
-          (material as THREE.LineBasicMaterial).linewidth = childData.material.linewidth
+          ;(material as THREE.LineBasicMaterial).linewidth =
+            childData.material.linewidth
         }
       }
 

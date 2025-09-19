@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/mtext-renderer",
-  "version": "0.4.11",
+  "version": "0.5.0",
   "description": "AutoCAD MText renderer based on Three.js",
   "license": "MIT",
   "author": "MLight Lee <mlight.lee@outlook.com>",

@@ -255,11 +255,11 @@ function serializeChildren(mtext: MText): {
           opacity: material.opacity
         }
 
-        // Add material-specific properties
-        if ('side' in material) {
+        // Add material-specific properties - only include serializable ones
+        if ('side' in material && typeof material.side === 'number') {
           materialData.side = material.side
         }
-        if ('linewidth' in material) {
+        if ('linewidth' in material && typeof material.linewidth === 'number') {
           materialData.linewidth = material.linewidth
         }
 

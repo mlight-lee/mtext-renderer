@@ -81,7 +81,9 @@ class MTextRendererExample {
     this.controls.maxPolarAngle = Math.PI / 2
 
     // Initialize unified renderer (default to main thread)
-    this.unifiedRenderer = new UnifiedRenderer('main')
+    this.unifiedRenderer = new UnifiedRenderer('main', {
+      workerUrl: './mtext-renderer-worker.js'
+    })
 
     // Get DOM elements
     this.mtextInput = document.getElementById(
@@ -196,9 +198,7 @@ class MTextRendererExample {
     // Render mode toggle
     this.renderModeSelect.addEventListener('change', async () => {
       const mode = this.renderModeSelect.value as RenderMode
-      this.unifiedRenderer.switchMode(mode, {
-        workerUrl: './mtext-renderer-worker.js'
-      })
+      this.unifiedRenderer.switchMode(mode)
       this.statusDiv.textContent = `Switched to ${mode} thread rendering`
       this.statusDiv.style.color = '#0f0'
 

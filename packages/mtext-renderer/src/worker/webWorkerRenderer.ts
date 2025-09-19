@@ -2,6 +2,7 @@ import * as THREE from 'three'
 
 import { FontManager } from '../font'
 import { ColorSettings, MTextData, TextStyle } from '../renderer/types'
+import { StyleManager } from '../renderer/styleManager'
 import { MTextBaseRenderer, MTextObject } from './baseRenderer'
 
 /**
@@ -25,6 +26,12 @@ export interface WebWorkerRendererConfig {
    * @default false
    */
   isLoadFontsOnDemand?: boolean
+
+  /**
+   * Timeout duration in milliseconds for worker requests
+   * @default 120000
+   */
+  timeOut?: number
 }
 
 // Worker message types
@@ -107,9 +114,11 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   > = new Map()
   private requestId = 0
   private poolSize: number
+  private timeOut: number
   private isLoadFontsOnDemand: boolean
   private readyPromise: Promise<void> | null = null
   private isInitialized: boolean
+  private styleManager: StyleManager
 
   constructor(config: WebWorkerRendererConfig = { isLoadFontsOnDemand: true }) {
     // Apply default values
@@ -122,7 +131,9 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
           : 2
       )
     this.isLoadFontsOnDemand = !!config.isLoadFontsOnDemand
+    this.styleManager = new StyleManager()
     const workerUrl = config.workerUrl ?? './mtext-renderer-worker.js'
+    this.timeOut = config.timeOut ?? 120000
 
     for (let i = 0; i < this.poolSize; i++) {
       const worker = new Worker(new URL(workerUrl, import.meta.url), {
@@ -224,7 +235,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
           )
           reject(new Error('Worker request timeout'))
         }
-      }, 30000)
+      }, this.timeOut)
     })
   }
 
@@ -255,7 +266,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
                 )
                 reject(new Error('Worker init timeout'))
               }
-            }, 30000)
+            }, this.timeOut)
           })
       )
     ).then(() => undefined)
@@ -312,7 +323,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
                 )
                 reject(new Error('Worker request timeout'))
               }
-            }, 30000)
+            }, this.timeOut)
           })
       )
     )
@@ -352,7 +363,7 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
             )
             reject(new Error('Worker request timeout'))
           }
-        }, 30000)
+        }, this.timeOut)
       }
     )
   }
@@ -404,22 +415,32 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
         }
       }
 
-      // Create material
+      // Create material using StyleManager for proper material reuse
       let material: THREE.Material
       if (childData.type === 'mesh') {
-        material = new THREE.MeshBasicMaterial({
-          color: childData.material.color,
-          transparent: childData.material.transparent,
-          opacity: childData.material.opacity,
-          side: childData.material.side as THREE.Side
-        })
+        material = this.styleManager.getMeshBasicMaterial(childData.material.color)
+        // Apply additional properties if they differ from defaults
+        if (childData.material.transparent !== undefined) {
+          material.transparent = childData.material.transparent
+        }
+        if (childData.material.opacity !== undefined) {
+          material.opacity = childData.material.opacity
+        }
+        if (childData.material.side !== undefined) {
+          material.side = childData.material.side as THREE.Side
+        }
       } else {
-        material = new THREE.LineBasicMaterial({
-          color: childData.material.color,
-          transparent: childData.material.transparent,
-          opacity: childData.material.opacity,
-          linewidth: childData.material.linewidth
-        })
+        material = this.styleManager.getLineBasicMaterial(childData.material.color)
+        // Apply additional properties if they differ from defaults
+        if (childData.material.transparent !== undefined) {
+          material.transparent = childData.material.transparent
+        }
+        if (childData.material.opacity !== undefined) {
+          material.opacity = childData.material.opacity
+        }
+        if (childData.material.linewidth !== undefined) {
+          (material as THREE.LineBasicMaterial).linewidth = childData.material.linewidth
+        }
       }
 
       // Create mesh or line

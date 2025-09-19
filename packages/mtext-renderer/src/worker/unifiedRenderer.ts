@@ -13,13 +13,22 @@ export class UnifiedRenderer {
   private mainThreadRenderer: MainThreadRenderer
   private adapter: MTextBaseRenderer
   private currentMode: RenderMode
+  private workerConfig?: WebWorkerRendererConfig
 
-  constructor(mode: RenderMode = 'main') {
+  /**
+   * Constructor
+   * 
+   * @param mode - Rendering mode. Default is 'main' which means rendering in main thread.
+   * @param workerConfig - Configuration options for WebWorkerRenderer which is used
+   *                     when render mode is 'worker'.
+   */
+  constructor(mode: RenderMode = 'main', workerConfig: WebWorkerRendererConfig = {}) {
     this.currentMode = mode
     this.mainThreadRenderer = new MainThreadRenderer()
     this.adapter = this.mainThreadRenderer
+    this.workerConfig = workerConfig
     if (mode === 'worker') {
-      this.workerManager = new WebWorkerRenderer({})
+      this.workerManager = new WebWorkerRenderer(workerConfig)
       this.adapter = this.workerManager
     }
   }
@@ -27,9 +36,8 @@ export class UnifiedRenderer {
   /**
    * Switch between main thread and worker rendering modes
    * @param mode The rendering mode to switch to
-   * @param workerConfig Configuration options for WebWorkerRenderer when switching to worker mode
    */
-  switchMode(mode: RenderMode, workerConfig?: WebWorkerRendererConfig): void {
+  switchMode(mode: RenderMode): void {
     if (this.currentMode === mode) {
       return // Already in the requested mode
     }
@@ -44,7 +52,7 @@ export class UnifiedRenderer {
 
     // Initialize new mode
     if (mode === 'worker') {
-      this.workerManager = new WebWorkerRenderer(workerConfig || {})
+      this.workerManager = new WebWorkerRenderer(this.workerConfig)
       this.adapter = this.workerManager
     } else {
       this.adapter = this.mainThreadRenderer

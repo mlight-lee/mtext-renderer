@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
 import { FontManager } from '../font'
-import { ColorSettings, MTextData, TextStyle } from '../renderer/types'
 import { StyleManager } from '../renderer/styleManager'
+import { ColorSettings, MTextData, TextStyle } from '../renderer/types'
 import { MTextBaseRenderer, MTextObject } from './baseRenderer'
 
 /**

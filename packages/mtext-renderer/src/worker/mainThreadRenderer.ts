@@ -20,9 +20,10 @@ export class MainThreadRenderer implements MTextBaseRenderer {
   }
 
   /**
-   * Render MText directly in the main thread
+   * Render MText directly in the main thread asynchronously. It will ensure that default font
+   * is loaded. And fonts needed in mtext are loaded on demand.
    */
-  async renderMText(
+  async asyncRenderMText(
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings: ColorSettings = {
@@ -38,7 +39,31 @@ export class MainThreadRenderer implements MTextBaseRenderer {
       this.fontManager,
       colorSettings
     )
-    await mtext.draw()
+    await mtext.asyncDraw()
+    mtext.updateMatrixWorld(true)
+    return mtext as MTextObject
+  }
+
+  /**
+   * Render MText directly in the main thread synchronously. It is user's responsibility to ensure
+   * that default font is loaded and fonts needed in mtext are loaded.
+   */
+  syncRenderMText(
+    mtextContent: MTextData,
+    textStyle: TextStyle,
+    colorSettings: ColorSettings = {
+      byLayerColor: 0xffffff,
+      byBlockColor: 0xffffff
+    }
+  ): MTextObject {
+    const mtext = new MText(
+      mtextContent,
+      textStyle,
+      this.styleManager,
+      this.fontManager,
+      colorSettings
+    )
+    mtext.syncDraw()
     mtext.updateMatrixWorld(true)
     return mtext as MTextObject
   }

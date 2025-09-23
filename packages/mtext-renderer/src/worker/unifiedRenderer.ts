@@ -70,9 +70,9 @@ export class UnifiedRenderer {
   }
 
   /**
-   * Render MText using the current mode
+   * Render MText using the current mode asynchronously
    */
-  async renderMText(
+  async asyncRenderMText(
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings: ColorSettings = {
@@ -80,7 +80,25 @@ export class UnifiedRenderer {
       byBlockColor: 0xffffff
     }
   ): Promise<MTextObject> {
-    return this.adapter.renderMText(mtextContent, textStyle, colorSettings)
+    return this.adapter.asyncRenderMText(mtextContent, textStyle, colorSettings)
+  }
+
+  /**
+   * Render MText using the current mode synchronously.
+   *
+   * Notes:
+   * One error will be thrown if calling this function in 'worker' mode because rendering
+   * process is always asynchronous in web worker mode.
+   */
+  syncRenderMText(
+    mtextContent: MTextData,
+    textStyle: TextStyle,
+    colorSettings: ColorSettings = {
+      byLayerColor: 0xffffff,
+      byBlockColor: 0xffffff
+    }
+  ): MTextObject {
+    return this.adapter.syncRenderMText(mtextContent, textStyle, colorSettings)
   }
 
   /**

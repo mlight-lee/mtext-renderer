@@ -108,17 +108,22 @@ export class MText extends THREE.Object3D {
 
   /**
    * Draw the MText object. This method loads required fonts on demand and builds the object graph.
-   *
-   * @param isLoadFontsOnDemand - The flag indicate whether to load required fonts on demand
    */
-  async draw(isLoadFontsOnDemand = true) {
-    if (isLoadFontsOnDemand) {
-      // Determine fonts used in the mtext string (without extensions)
-      const fonts = Array.from(MText.getFonts(this._mtextData.text || '', true))
-      if (fonts.length > 0) {
-        await this._fontManager.loadFontsByNames(fonts)
-      }
+  async asyncDraw() {
+    // Determine fonts used in the mtext string (without extensions)
+    const fonts = Array.from(MText.getFonts(this._mtextData.text || '', true))
+    if (fonts.length > 0) {
+      await this._fontManager.loadFontsByNames(fonts)
     }
+
+    this.syncDraw()
+  }
+
+  /**
+   * Draw the MText object. This method assumes that fonts needed are loaded. If font needed
+   * not found, the default font will be used.
+   */
+  syncDraw() {
     const obj = this.loadMText(this._mtextData, this._style)
     if (obj) {
       this.getBoxes(obj, this._boxes)

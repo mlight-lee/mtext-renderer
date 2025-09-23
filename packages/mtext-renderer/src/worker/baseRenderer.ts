@@ -24,7 +24,7 @@ export interface MTextObject extends THREE.Object3D {
  */
 export interface MTextBaseRenderer {
   /**
-   * Render the provided MText content into a Three.js object hierarchy.
+   * Render the provided MText content into a Three.js object hierarchy asynchronously
    *
    * The returned root object contains meshes/lines for glyphs and exposes a
    * bounding box on `object.box`.
@@ -34,11 +34,28 @@ export interface MTextBaseRenderer {
    * @param colorSettings Optional color context (ByLayer, ByBlock colors).
    * @returns A Promise resolving to a populated `MTextObject` ready to add to a scene.
    */
-  renderMText(
+  asyncRenderMText(
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings?: ColorSettings
   ): Promise<MTextObject>
+
+  /**
+   * Render the provided MText content into a Three.js object hierarchy synchronously.
+   *
+   * The returned root object contains meshes/lines for glyphs and exposes a
+   * bounding box on `object.box`.
+   *
+   * @param mtextContent Structured MText input (text, height, width, position).
+   * @param textStyle Text style to apply (font, width factor, oblique, etc.).
+   * @param colorSettings Optional color context (ByLayer, ByBlock colors).
+   * @returns A Promise resolving to a populated `MTextObject` ready to add to a scene.
+   */
+  syncRenderMText(
+    mtextContent: MTextData,
+    textStyle: TextStyle,
+    colorSettings?: ColorSettings
+  ): MTextObject
 
   /**
    * Ensure the specified fonts are available to the renderer.

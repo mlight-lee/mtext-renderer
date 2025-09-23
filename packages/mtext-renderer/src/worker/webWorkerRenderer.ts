@@ -20,12 +20,6 @@ export interface WebWorkerRendererConfig {
    * @default './mtext-renderer-worker.js'
    */
   workerUrl?: string
-  /**
-   * The flag indicate whether to load required fonts on demand
-   *
-   * @default false
-   */
-  isLoadFontsOnDemand?: boolean
 
   /**
    * Timeout duration in milliseconds for worker requests
@@ -115,12 +109,11 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   private requestId = 0
   private poolSize: number
   private timeOut: number
-  private isLoadFontsOnDemand: boolean
   private readyPromise: Promise<void> | null = null
   private isInitialized: boolean
   private styleManager: StyleManager
 
-  constructor(config: WebWorkerRendererConfig = { isLoadFontsOnDemand: true }) {
+  constructor(config: WebWorkerRendererConfig = {}) {
     // Apply default values
     this.poolSize =
       config.poolSize ??
@@ -130,7 +123,6 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
           ? Math.min(4, navigator.hardwareConcurrency)
           : 2
       )
-    this.isLoadFontsOnDemand = !!config.isLoadFontsOnDemand
     this.styleManager = new StyleManager()
     const workerUrl = config.workerUrl ?? './mtext-renderer-worker.js'
     this.timeOut = config.timeOut ?? 120000
@@ -275,9 +267,9 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
   }
 
   /**
-   * Render MText in the worker and return serialized data
+   * Render MText in the worker and return serialized data asynchronously.
    */
-  async renderMText(
+  async asyncRenderMText(
     mtextContent: MTextData,
     textStyle: TextStyle,
     colorSettings: ColorSettings = {
@@ -289,10 +281,26 @@ export class WebWorkerRenderer implements MTextBaseRenderer {
     const serialized = await this.sendMessage<SerializedMText>('render', {
       mtextContent,
       textStyle,
-      colorSettings,
-      isLoadFontsOnDemand: this.isLoadFontsOnDemand
+      colorSettings
     })
     return this.reconstructMText(serialized)
+  }
+
+  /**
+   * Render MText synchronously.
+   * Notes: It isn't supported yet.
+   */
+  syncRenderMText(
+    _mtextContent: MTextData,
+    _textStyle: TextStyle,
+    _colorSettings: ColorSettings = {
+      byLayerColor: 0xffffff,
+      byBlockColor: 0xffffff
+    }
+  ): MTextObject {
+    throw new Error(
+      'Fuction \'syncRenderMText\' isn\'t supported in \'WebWorkerRenderer\'!'
+    )
   }
 
   /**

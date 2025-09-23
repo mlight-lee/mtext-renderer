@@ -442,7 +442,7 @@ class MTextRendererExample {
         const multipleData = this.createMultipleMTextData()
 
         const renderPromises = multipleData.map(({ mtextData, textStyle }) => {
-          return this.unifiedRenderer.renderMText(mtextData, textStyle, {
+          return this.unifiedRenderer.asyncRenderMText(mtextData, textStyle, {
             byLayerColor: 0xffffff,
             byBlockColor: 0xffffff
           })
@@ -520,7 +520,7 @@ class MTextRendererExample {
         }
 
         // Render MText using unified renderer
-        this.currentMText = await this.unifiedRenderer.renderMText(
+        this.currentMText = await this.unifiedRenderer.asyncRenderMText(
           mtextContent,
           textStyle,
           {

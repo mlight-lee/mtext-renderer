@@ -97,7 +97,8 @@ The package provides a sophisticated worker-based rendering system that allows M
 Defines the common rendering contract for producing Three.js objects from MText content. All renderer implementations must conform to this interface.
 
 **Public Methods:**
-- `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText content into a Three.js object hierarchy
+- `asyncRenderMText(mtextContent, textStyle, colorSettings?)`: Asynchronously render MText into a Three.js object hierarchy
+- `syncRenderMText(mtextContent, textStyle, colorSettings?)`: Synchronously render MText (not supported in worker mode)
 - `destroy()`: Release any resources owned by the renderer
 
 ### MTextObject Interface
@@ -112,7 +113,8 @@ Represents a rendered MText object that extends THREE.Object3D with additional M
 Renders MText content directly in the main thread. This is the simplest renderer implementation that provides the same interface as worker-based renderers but runs synchronously in the main thread.
 
 **Public Methods:**
-- `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText directly in the main thread
+- `asyncRenderMText(mtextContent, textStyle, colorSettings?)`: Render asynchronously in the main thread (loads fonts on demand)
+- `syncRenderMText(mtextContent, textStyle, colorSettings?)`: Render synchronously in the main thread (fonts must already be loaded)
 - `destroy()`: Cleanup resources
 
 ### WebWorkerRenderer (MTextWorkerManager)
@@ -123,7 +125,7 @@ Manages communication with MText Web Workers for parallel text rendering. This r
 - `poolSize`: Number of workers in the pool (defaults to optimal size based on hardware concurrency)
 
 **Public Methods:**
-- `renderMText(mtextContent, textStyle, colorSettings?)`: Render MText using worker pool
+- `asyncRenderMText(mtextContent, textStyle, colorSettings?)`: Render MText using worker pool asynchronously
 - `terminate()`: Terminate all workers
 - `destroy()`: Cleanup all resources
 
@@ -144,7 +146,8 @@ A flexible renderer that can switch between main thread and Web Worker rendering
 **Public Methods:**
 - `switchMode(mode)`: Switch between main thread and worker rendering modes
 - `getMode()`: Get current rendering mode
-- `renderMText(mtextContent, textStyle, colorSettings?)`: Render using current mode
+- `asyncRenderMText(mtextContent, textStyle, colorSettings?)`: Render asynchronously using current mode
+- `syncRenderMText(mtextContent, textStyle, colorSettings?)`: Render synchronously using current mode (only supported in main mode)
 - `destroy()`: Clean up all resources
 
 ### MTextWorker
@@ -166,7 +169,8 @@ Main class for rendering AutoCAD MText content. Extends THREE.Object3D to integr
 - `styleManager`: Reference to StyleManager instance for style operations
 
 **Public Methods:**
-- `draw()`: Asynchronously builds geometry and loads required fonts on demand
+- `asyncDraw()`: Asynchronously builds geometry and loads required fonts on demand
+- `syncDraw()`: Synchronously builds geometry (assumes required fonts are already loaded)
 
 ## Class Diagram
 
@@ -245,7 +249,8 @@ classDiagram
 
     class MTextBaseRenderer {
         <<interface>>
-        +renderMText(mtextContent, textStyle, colorSettings?)
+        +asyncRenderMText(mtextContent, textStyle, colorSettings?)
+        +syncRenderMText(mtextContent, textStyle, colorSettings?)
         +loadFonts(fonts)
         +getAvailableFonts()
         +destroy()
@@ -260,7 +265,8 @@ classDiagram
         -fontManager: FontManager
         -styleManager: StyleManager
         -fontLoader: DefaultFontLoader
-        +renderMText(mtextContent, textStyle, colorSettings?)
+        +asyncRenderMText(mtextContent, textStyle, colorSettings?)
+        +syncRenderMText(mtextContent, textStyle, colorSettings?)
         +loadFonts(fonts)
         +getAvailableFonts()
         +destroy()
@@ -271,7 +277,7 @@ classDiagram
         -inFlightPerWorker: number[]
         -pendingRequests: Map
         -poolSize: number
-        +renderMText(mtextContent, textStyle, colorSettings?)
+        +asyncRenderMText(mtextContent, textStyle, colorSettings?)
         +loadFonts(fonts)
         +getAvailableFonts()
         +terminate()
@@ -285,7 +291,8 @@ classDiagram
         -currentMode: RenderMode
         +switchMode(mode)
         +getMode()
-        +renderMText(mtextContent, textStyle, colorSettings?)
+        +asyncRenderMText(mtextContent, textStyle, colorSettings?)
+        +syncRenderMText(mtextContent, textStyle, colorSettings?)
         +loadFonts(fonts)
         +getAvailableFonts()
         +destroy()
@@ -331,7 +338,7 @@ import { FontManager, MText, StyleManager } from '@mlightcad/mtext-renderer';
 const fontManager = FontManager.instance;
 const styleManager = new StyleManager();
 
-// Optionally preload a font (otherwise MText will load on demand in draw())
+// Optionally preload a font (otherwise MText will load on demand in asyncDraw())
 await fontManager.loadFontsByNames(['simsun']);
 
 // Create MText content
@@ -362,9 +369,22 @@ const mtext = new MText(
 );
 
 // Build geometry and load fonts on demand
-await mtext.draw();
+await mtext.asyncDraw();
 
 // Add to Three.js scene
+scene.add(mtext);
+```
+
+### Synchronous usage (fonts must be preloaded)
+
+```typescript
+// Ensure required fonts are loaded beforehand
+await fontManager.loadFontsByNames(['simsun']);
+
+const mtext = new MText(mtextContent, textStyle, styleManager, fontManager);
+
+// Build geometry synchronously (no awaits here)
+mtext.syncDraw();
 scene.add(mtext);
 ```
 
@@ -378,8 +398,8 @@ import { MainThreadRenderer } from '@mlightcad/mtext-renderer';
 // Create main thread renderer
 const renderer = new MainThreadRenderer();
 
-// Render MText content (fonts are loaded on demand during rendering)
-const mtextObject = await renderer.renderMText(
+// Render MText content asynchronously (fonts are loaded on demand)
+const mtextObject = await renderer.asyncRenderMText(
   mtextContent,
   textStyle,
   { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
@@ -387,6 +407,15 @@ const mtextObject = await renderer.renderMText(
 
 // Add to scene
 scene.add(mtextObject);
+
+// Or render synchronously (fonts must be preloaded)
+// await renderer.loadFonts(['simsun']);
+const syncObject = renderer.syncRenderMText(
+  mtextContent,
+  textStyle,
+  { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
+);
+scene.add(syncObject);
 ```
 
 ### Using WebWorkerRenderer
@@ -400,8 +429,8 @@ const workerRenderer = new WebWorkerRenderer({ poolSize: 4 }); // 4 workers
 // Optionally preload fonts once via a coordinator to avoid duplicate concurrent loads
 // await workerRenderer.loadFonts(['simsun', 'arial']);
 
-// Render MText content using workers (fonts will be loaded on demand if not preloaded)
-const mtextObject = await workerRenderer.renderMText(
+// Render MText content using workers asynchronously (fonts loaded on demand)
+const mtextObject = await workerRenderer.asyncRenderMText(
   mtextContent,
   textStyle,
   { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
@@ -414,6 +443,8 @@ scene.add(mtextObject);
 workerRenderer.destroy();
 ```
 
+Note: Synchronous rendering is not supported in worker mode.
+
 ### Using UnifiedRenderer
 
 ```typescript
@@ -422,8 +453,8 @@ import { UnifiedRenderer } from '@mlightcad/mtext-renderer';
 // Create unified renderer starting in main thread mode
 const unifiedRenderer = new UnifiedRenderer('main');
 
-// Render using main thread (fonts loaded on demand)
-let mtextObject = await unifiedRenderer.renderMText(
+// Render using main thread asynchronously (fonts loaded on demand)
+let mtextObject = await unifiedRenderer.asyncRenderMText(
   mtextContent,
   textStyle,
   { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
@@ -437,8 +468,8 @@ unifiedRenderer.switchMode('worker');
 // Optionally preload fonts in workers to avoid duplicates
 // await unifiedRenderer.loadFonts(['simsun', 'arial']);
 
-// Render using workers
-mtextObject = await unifiedRenderer.renderMText(
+// Render using workers asynchronously
+mtextObject = await unifiedRenderer.asyncRenderMText(
   heavyMtextContent,
   textStyle,
   { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
@@ -450,11 +481,13 @@ scene.add(mtextObject);
 unifiedRenderer.destroy();
 ```
 
+You can also call `syncRenderMText` when in `main` mode (fonts must be preloaded). Calling `syncRenderMText` in `worker` mode will throw an error.
+
 ### Performance Considerations
 
 **When to use MainThreadRenderer:**
 - Simple MText content with few characters
-- When you need immediate synchronous results
+- When you need immediate synchronous results (use `syncRenderMText`)
 - When worker overhead would be greater than rendering time
 
 **When to use WebWorkerRenderer:**
@@ -462,6 +495,7 @@ unifiedRenderer.destroy();
 - Complex text with many formatting codes
 - When you want to keep the main thread responsive
 - Batch processing of multiple MText objects
+ - Note: Only asynchronous rendering is supported in workers
 
 **When to use UnifiedRenderer:**
 - Applications that need to switch rendering strategies dynamically

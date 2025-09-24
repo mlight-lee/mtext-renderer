@@ -9,11 +9,11 @@ export type RenderMode = 'main' | 'worker'
  * Unified renderer that can work in both main thread and web worker modes
  */
 export class UnifiedRenderer {
-  private workerManager: WebWorkerRenderer | null = null
+  private webWorkerRenderer: WebWorkerRenderer | null = null
   private mainThreadRenderer: MainThreadRenderer
   private adapter: MTextBaseRenderer
   private currentMode: RenderMode
-  private workerConfig?: WebWorkerRendererConfig
+  private webWorkerConfig?: WebWorkerRendererConfig
 
   /**
    * Constructor
@@ -29,10 +29,10 @@ export class UnifiedRenderer {
     this.currentMode = mode
     this.mainThreadRenderer = new MainThreadRenderer()
     this.adapter = this.mainThreadRenderer
-    this.workerConfig = workerConfig
+    this.webWorkerConfig = workerConfig
     if (mode === 'worker') {
-      this.workerManager = new WebWorkerRenderer(workerConfig)
-      this.adapter = this.workerManager
+      this.webWorkerRenderer = new WebWorkerRenderer(workerConfig)
+      this.adapter = this.webWorkerRenderer
     }
   }
 
@@ -45,18 +45,14 @@ export class UnifiedRenderer {
       return // Already in the requested mode
     }
 
-    // Clean up current mode
-    if (this.currentMode === 'worker' && this.workerManager) {
-      this.workerManager.terminate()
-      this.workerManager = null
-    }
-
     this.currentMode = mode
 
     // Initialize new mode
     if (mode === 'worker') {
-      this.workerManager = new WebWorkerRenderer(this.workerConfig)
-      this.adapter = this.workerManager
+      if (!this.webWorkerRenderer) {
+        this.webWorkerRenderer = new WebWorkerRenderer(this.webWorkerConfig)
+        this.adapter = this.webWorkerRenderer
+      }
     } else {
       this.adapter = this.mainThreadRenderer
     }
@@ -119,9 +115,9 @@ export class UnifiedRenderer {
    * Clean up resources
    */
   destroy(): void {
-    if (this.workerManager) {
-      this.workerManager.terminate()
-      this.workerManager = null
+    if (this.webWorkerRenderer) {
+      this.webWorkerRenderer.terminate()
+      this.webWorkerRenderer = null
     }
     this.mainThreadRenderer.destroy()
   }

@@ -141,13 +141,13 @@ Manages communication with MText Web Workers for parallel text rendering. This r
 A flexible renderer that can switch between main thread and Web Worker rendering modes at runtime. This allows applications to dynamically choose the best rendering strategy based on current conditions.
 
 **Public Properties:**
-- `currentMode`: Current rendering mode ('main' or 'worker')
+- `defaultMode`: Default rendering mode ('main' or 'worker') used when no per-call override is provided
 
 **Public Methods:**
-- `switchMode(mode)`: Switch between main thread and worker rendering modes
-- `getMode()`: Get current rendering mode
-- `asyncRenderMText(mtextContent, textStyle, colorSettings?)`: Render asynchronously using current mode
-- `syncRenderMText(mtextContent, textStyle, colorSettings?)`: Render synchronously using current mode (only supported in main mode)
+- `setDefaultMode(mode)`: Set the default rendering mode
+- `getDefaultMode()`: Get the default rendering mode
+- `asyncRenderMText(mtextContent, textStyle, colorSettings?, mode?)`: Render asynchronously; pass `mode` to override the default for this call
+- `syncRenderMText(mtextContent, textStyle, colorSettings?)`: Render synchronously; always uses the main thread internally
 - `destroy()`: Clean up all resources
 
 ### MTextWorker
@@ -285,13 +285,13 @@ classDiagram
     }
 
     class UnifiedRenderer {
-        -workerManager: WebWorkerRenderer
+        -webWorkerRenderer: WebWorkerRenderer
         -mainThreadRenderer: MainThreadRenderer
-        -adapter: MTextBaseRenderer
-        -currentMode: RenderMode
-        +switchMode(mode)
-        +getMode()
-        +asyncRenderMText(mtextContent, textStyle, colorSettings?)
+        -renderer: MTextBaseRenderer
+        -defaultMode: RenderMode
+        +setDefaultMode(mode)
+        +getDefaultMode()
+        +asyncRenderMText(mtextContent, textStyle, colorSettings?, mode?)
         +syncRenderMText(mtextContent, textStyle, colorSettings?)
         +loadFonts(fonts)
         +getAvailableFonts()
@@ -450,10 +450,10 @@ Note: Synchronous rendering is not supported in worker mode.
 ```typescript
 import { UnifiedRenderer } from '@mlightcad/mtext-renderer';
 
-// Create unified renderer starting in main thread mode
+// Create unified renderer with default mode 'main' (optional worker config as second param)
 const unifiedRenderer = new UnifiedRenderer('main');
 
-// Render using main thread asynchronously (fonts loaded on demand)
+// Render using default mode (main) asynchronously (fonts loaded on demand)
 let mtextObject = await unifiedRenderer.asyncRenderMText(
   mtextContent,
   textStyle,
@@ -462,17 +462,16 @@ let mtextObject = await unifiedRenderer.asyncRenderMText(
 
 scene.add(mtextObject);
 
-// Switch to worker mode for heavy rendering tasks
-unifiedRenderer.switchMode('worker');
+// Change default mode to worker for subsequent calls
+unifiedRenderer.setDefaultMode('worker');
 
-// Optionally preload fonts in workers to avoid duplicates
-// await unifiedRenderer.loadFonts(['simsun', 'arial']);
-
-// Render using workers asynchronously
+// Or override mode per call without changing the default
+// e.g., render this heavy content in worker, regardless of default
 mtextObject = await unifiedRenderer.asyncRenderMText(
   heavyMtextContent,
   textStyle,
-  { byLayerColor: 0xffffff, byBlockColor: 0xffffff }
+  { byLayerColor: 0xffffff, byBlockColor: 0xffffff },
+  'worker'
 );
 
 scene.add(mtextObject);
@@ -481,7 +480,7 @@ scene.add(mtextObject);
 unifiedRenderer.destroy();
 ```
 
-You can also call `syncRenderMText` when in `main` mode (fonts must be preloaded). Calling `syncRenderMText` in `worker` mode will throw an error.
+`syncRenderMText` always renders on the main thread (fonts must be preloaded). This method is not available in the worker renderer, so the unified renderer routes it to the main-thread implementation regardless of the current default mode.
 
 ### Performance Considerations
 

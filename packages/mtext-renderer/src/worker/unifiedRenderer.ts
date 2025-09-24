@@ -9,64 +9,56 @@ export type RenderMode = 'main' | 'worker'
  * Unified renderer that can work in both main thread and web worker modes
  */
 export class UnifiedRenderer {
-  private webWorkerRenderer: WebWorkerRenderer | null = null
+  private webWorkerRenderer: WebWorkerRenderer
   private mainThreadRenderer: MainThreadRenderer
-  private adapter: MTextBaseRenderer
-  private currentMode: RenderMode
-  private webWorkerConfig?: WebWorkerRendererConfig
-
+  private renderer: MTextBaseRenderer
+  private defaultMode: RenderMode
   /**
    * Constructor
    *
-   * @param mode - Rendering mode. Default is 'main' which means rendering in main thread.
+   * @param defaultMode - Default rendering mode. Default is 'main' which means rendering in main thread.
    * @param workerConfig - Configuration options for WebWorkerRenderer which is used
    *                     when render mode is 'worker'.
    */
   constructor(
-    mode: RenderMode = 'main',
+    defaultMode: RenderMode = 'main',
     workerConfig: WebWorkerRendererConfig = {}
   ) {
-    this.currentMode = mode
+    this.defaultMode = defaultMode
     this.mainThreadRenderer = new MainThreadRenderer()
-    this.adapter = this.mainThreadRenderer
-    this.webWorkerConfig = workerConfig
-    if (mode === 'worker') {
-      this.webWorkerRenderer = new WebWorkerRenderer(workerConfig)
-      this.adapter = this.webWorkerRenderer
+    this.webWorkerRenderer = new WebWorkerRenderer(workerConfig)
+    this.renderer = this.mainThreadRenderer
+    if (defaultMode === 'worker') {
+      this.renderer = this.webWorkerRenderer
     }
   }
 
   /**
-   * Switch between main thread and worker rendering modes
-   * @param mode The rendering mode to switch to
+   * Sets the default rendering mmode
+   * @param mode The default rendering mode
    */
-  switchMode(mode: RenderMode): void {
-    if (this.currentMode === mode) {
-      return // Already in the requested mode
+  setDefaultMode(mode: RenderMode): void {
+    if (this.defaultMode === mode) {
+      return
     }
-
-    this.currentMode = mode
-
-    // Initialize new mode
+    this.defaultMode = mode
     if (mode === 'worker') {
-      if (!this.webWorkerRenderer) {
-        this.webWorkerRenderer = new WebWorkerRenderer(this.webWorkerConfig)
-        this.adapter = this.webWorkerRenderer
-      }
+      this.renderer = this.webWorkerRenderer
     } else {
-      this.adapter = this.mainThreadRenderer
+      this.renderer = this.mainThreadRenderer
     }
   }
 
   /**
-   * Get current rendering mode
+   * Get the default rendering mode
    */
-  getMode(): RenderMode {
-    return this.currentMode
+  getDefaultMode(): RenderMode {
+    return this.defaultMode
   }
 
   /**
-   * Render MText using the current mode asynchronously
+   * Render MText using the current mode asynchronously.
+   * @param mode - Rendering mode used. If undefined, the default rendering mode is used.
    */
   async asyncRenderMText(
     mtextContent: MTextData,
@@ -74,17 +66,25 @@ export class UnifiedRenderer {
     colorSettings: ColorSettings = {
       byLayerColor: 0xffffff,
       byBlockColor: 0xffffff
-    }
+    },
+    mode?: RenderMode
   ): Promise<MTextObject> {
-    return this.adapter.asyncRenderMText(mtextContent, textStyle, colorSettings)
+    if (mode) {
+      const renderer =
+        mode === 'worker' ? this.webWorkerRenderer : this.mainThreadRenderer
+      return renderer.asyncRenderMText(mtextContent, textStyle, colorSettings)
+    } else {
+      return this.renderer.asyncRenderMText(
+        mtextContent,
+        textStyle,
+        colorSettings
+      )
+    }
   }
 
   /**
-   * Render MText using the current mode synchronously.
-   *
-   * Notes:
-   * One error will be thrown if calling this function in 'worker' mode because rendering
-   * process is always asynchronous in web worker mode.
+   * Render MText using the current mode synchronously. Main thread render is always used
+   * for this function because web worker renderer doesn't support rendering synchronously.
    */
   syncRenderMText(
     mtextContent: MTextData,
@@ -94,21 +94,25 @@ export class UnifiedRenderer {
       byBlockColor: 0xffffff
     }
   ): MTextObject {
-    return this.adapter.syncRenderMText(mtextContent, textStyle, colorSettings)
+    return this.mainThreadRenderer.syncRenderMText(
+      mtextContent,
+      textStyle,
+      colorSettings
+    )
   }
 
   /**
    * Load fonts using the current mode
    */
   async loadFonts(fonts: string[]): Promise<{ loaded: string[] }> {
-    return this.adapter.loadFonts(fonts)
+    return this.renderer.loadFonts(fonts)
   }
 
   /**
    * Get available fonts using the current mode
    */
   async getAvailableFonts(): Promise<{ fonts: Array<{ name: string[] }> }> {
-    return this.adapter.getAvailableFonts()
+    return this.renderer.getAvailableFonts()
   }
 
   /**
@@ -117,7 +121,6 @@ export class UnifiedRenderer {
   destroy(): void {
     if (this.webWorkerRenderer) {
       this.webWorkerRenderer.terminate()
-      this.webWorkerRenderer = null
     }
     this.mainThreadRenderer.destroy()
   }

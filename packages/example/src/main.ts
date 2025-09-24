@@ -198,7 +198,7 @@ class MTextRendererExample {
     // Render mode toggle
     this.renderModeSelect.addEventListener('change', async () => {
       const mode = this.renderModeSelect.value as RenderMode
-      this.unifiedRenderer.switchMode(mode)
+      this.unifiedRenderer.setDefaultMode(mode)
       this.statusDiv.textContent = `Switched to ${mode} thread rendering`
       this.statusDiv.style.color = '#0f0'
 
